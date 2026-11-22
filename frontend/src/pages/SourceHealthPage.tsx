@@ -1,5 +1,14 @@
 import * as React from "react";
-import { CheckCircle2, CircleAlert, RefreshCw, Search, Trash2, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  CircleAlert,
+  CircleSlash,
+  RefreshCw,
+  Search,
+  Square,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 
 import {
   Button,
@@ -14,33 +23,68 @@ import {
   Spinner,
   cn,
 } from "@/components/ui";
+import { SourceGroupTabs } from "@/components/sources/SourceGroupTabs";
 import {
+  SOURCE_GROUP_ALL,
+  buildSourceGroups,
+  filterSources,
   useBookSources,
   useDeleteBookSources,
 } from "@/components/sources/useSources";
 import { humanizeError } from "@/lib/errors";
+import { getJSON, setJSON } from "@/lib/storage";
 import { searchBook } from "@/services/search";
 import type { BookSource } from "@/types/api";
 
-/** 单源体检结果 */
-type ProbeStatus = "idle" | "running" | "ok" | "fail";
+/**
+ * 逐源体检结论:
+ * - ok    搜索成功且有条目 → 源可用
+ * - empty 搜索成功但 0 条   → 源活着, 只是这个词搜不到(规则可能只对特定书生效)
+ * - fail  请求报错 / 超时   → 判定失效
+ */
+type ProbeStatus = "idle" | "running" | "ok" | "empty" | "fail";
 
 interface ProbeState {
   status: ProbeStatus;
-  /** 命中的书名数（>0 视为可用） */
+  /** 命中的书名数 */
   hits: number;
-  /** 失败原因（人话） */
+  /** 失败原因(人话) */
   reason: string;
+  /** 完成时间戳(ms), 用于展示「几分钟前测的」 */
+  at: number;
 }
 
-/** 体检用的关键词：书名越常见越能测出源是否真能用 */
-const PROBE_KEYWORDS = ["斗罗大陆", "凡人修仙传", "诡秘之主"];
+/** 体检用的关键词: 轮换着用, 避免某个源恰好收录这本书而误判 */
+const PROBE_KEYWORDS = ["斗破苍穹", "斗罗大陆", "凡人修仙传", "诡秘之主"];
+const CONCURRENCY = 4;
+const PROBE_TIMEOUT = 20_000;
+
+/** 结果落盘: 几百个源跑一遍要几分钟, 切页/刷新后不该白跑 */
+const STORAGE_KEY = "reader.sourceHealth.v1";
+
+interface PersistedRun {
+  keyword: string;
+  at: number;
+  results: Record<string, ProbeState>;
+}
+
+/** 状态筛选: 与三态一一对应, 外加「未检测」 */
+type StatusFilter = "all" | "fail" | "empty" | "ok" | "idle";
+
+const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
+  { value: "all", label: "全部" },
+  { value: "fail", label: "失效" },
+  { value: "empty", label: "无结果" },
+  { value: "ok", label: "正常" },
+  { value: "idle", label: "未检测" },
+];
 
 /**
- * 书源即时体检：逐源真跑一次搜索，找出失效源并支持批量删除。
+ * 书源体检: 逐源真跑一次搜索, 分「正常 / 无结果 / 失效」三类, 支持按分组圈定范围、
+ * 按结论筛选、批量清理。
  *
- * 与原生「失效源检测」的区别：原生是后端在搜索/换源失败时被动打标记，
- * 这里是一键主动、并发地把所有源都打一遍搜索接口，跑出即时的可用性快照。
+ * 与原生「失效源检测」的区别: 原生是后端在搜索/换源失败时被动打标记, 这里是一键
+ * 主动、受控并发地把选中的源都打一遍搜索接口, 得到即时的可用性快照。
  */
 export default function SourceHealthPage() {
   const { sources, isLoading, isFetching, refetch } = useBookSources();
@@ -49,89 +93,156 @@ export default function SourceHealthPage() {
   const [probes, setProbes] = React.useState<Record<string, ProbeState>>({});
   const [running, setRunning] = React.useState(false);
   const [checkedCount, setCheckedCount] = React.useState(0);
+  const [probeTotal, setProbeTotal] = React.useState(0);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [keywordIdx, setKeywordIdx] = React.useState(0);
+  const [group, setGroup] = React.useState<string>(SOURCE_GROUP_ALL);
+  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
+  const [keyword, setKeyword] = React.useState<string>(PROBE_KEYWORDS[0]!);
+  const [lastRunAt, setLastRunAt] = React.useState<number>(0);
+  const cancelRef = React.useRef(false);
 
-  const enabledSources = React.useMemo(
-    () => sources.filter((s) => s.enabled),
-    [sources],
+  /** 只体检启用中的源 */
+  const enabledSources = React.useMemo(() => sources.filter((s) => s.enabled), [sources]);
+
+  const groupItems = React.useMemo(() => buildSourceGroups(enabledSources), [enabledSources]);
+
+  /** 当前分组圈定的范围: 统计与体检都以它为准 */
+  const scopedSources = React.useMemo(
+    () => filterSources(enabledSources, group, ""),
+    [enabledSources, group],
   );
 
-  const failedUrls = React.useMemo(
-    () => enabledSources.filter((s) => probes[s.bookSourceUrl]?.status === "fail"),
-    [enabledSources, probes],
-  );
+  // 首次进入: 恢复上一次的体检结果
+  React.useEffect(() => {
+    const saved = getJSON<PersistedRun>(STORAGE_KEY);
+    if (!saved || !saved.results) return;
+    setProbes(saved.results);
+    setKeyword(saved.keyword || PROBE_KEYWORDS[0]!);
+    setLastRunAt(saved.at || 0);
+  }, []);
 
-  const okCount = React.useMemo(
-    () => enabledSources.filter((s) => probes[s.bookSourceUrl]?.status === "ok").length,
-    [enabledSources, probes],
-  );
+  // 分组被清空(整组源都被删掉)时回到「全部」, 避免停在空列表
+  React.useEffect(() => {
+    if (group !== SOURCE_GROUP_ALL && !groupItems.some((g) => g.value === group)) {
+      setGroup(SOURCE_GROUP_ALL);
+    }
+  }, [group, groupItems]);
 
-  /** 逐个源跑一次搜索（受控并发，避免把源站打死） */
+  const counts = React.useMemo(() => {
+    const acc = { ok: 0, empty: 0, fail: 0, idle: 0, running: 0 };
+    for (const src of scopedSources) {
+      const status = probes[src.bookSourceUrl]?.status ?? "idle";
+      acc[status] += 1;
+    }
+    return acc;
+  }, [scopedSources, probes]);
+
+  /** 可清理 = 失效 + 无结果 */
+  const cleanableCount = counts.fail + counts.empty;
+
+  const visibleSources = React.useMemo(() => {
+    if (statusFilter === "all") return scopedSources;
+    return scopedSources.filter(
+      (s) => (probes[s.bookSourceUrl]?.status ?? "idle") === statusFilter,
+    );
+  }, [scopedSources, statusFilter, probes]);
+
+  function saveRun(next: Record<string, ProbeState>, kw: string) {
+    setJSON<PersistedRun>(STORAGE_KEY, { keyword: kw, at: Date.now(), results: next });
+  }
+
+  /** 逐源跑一次搜索(受控并发), 按命中数分三态 */
   async function runProbe() {
-    if (running) return;
+    if (running || scopedSources.length === 0) return;
+    const list = [...scopedSources];
+    const kw = keyword;
+    cancelRef.current = false;
     setRunning(true);
     setCheckedCount(0);
+    setProbeTotal(list.length);
     setSelected(new Set());
-    const keyword = PROBE_KEYWORDS[keywordIdx % PROBE_KEYWORDS.length] ?? PROBE_KEYWORDS[0]!;
+    setStatusFilter("all");
 
-    // 每个源重置为 running
-    const next: Record<string, ProbeState> = {};
-    for (const s of enabledSources) {
-      next[s.bookSourceUrl] = { status: "running", hits: 0, reason: "" };
+    let snapshot: Record<string, ProbeState> = { ...probes };
+    for (const s of list) {
+      snapshot[s.bookSourceUrl] = { status: "running", hits: 0, reason: "", at: 0 };
     }
-    setProbes(next);
+    setProbes(snapshot);
 
-    // 受控并发（一次 4 个源），逐源串行推进
-    const queue = [...enabledSources];
-    const concurrency = 4;
+    const queue = [...list];
     let done = 0;
+
     async function worker() {
-      while (queue.length > 0) {
+      while (!cancelRef.current) {
         const src = queue.shift();
         if (!src) break;
-        const srcUrl: string = src.bookSourceUrl;
-        if (!srcUrl) continue;
+        const url = src.bookSourceUrl;
+        let next: ProbeState;
         try {
-          const hits = await searchBook(keyword, srcUrl, 1, {
-            timeout: 30_000,
-          });
-          setProbes((prev) => ({
-            ...prev,
-            [srcUrl]: { status: "ok", hits: hits.length, reason: "" },
-          }));
+          const hits = await searchBook(kw, url, 1, { timeout: PROBE_TIMEOUT });
+          next =
+            hits.length > 0
+              ? { status: "ok", hits: hits.length, reason: "", at: Date.now() }
+              : { status: "empty", hits: 0, reason: "", at: Date.now() };
         } catch (err) {
-          setProbes((prev) => ({
-            ...prev,
-            [srcUrl]: {
-              status: "fail",
-              hits: 0,
-              reason: humanizeError(err instanceof Error ? err.message : String(err), "搜索失败"),
-            },
-          }));
+          next = {
+            status: "fail",
+            hits: 0,
+            reason: humanizeError(err instanceof Error ? err.message : String(err), "搜索失败"),
+            at: Date.now(),
+          };
         }
+        snapshot = { ...snapshot, [url]: next };
+        setProbes(snapshot);
         done += 1;
         setCheckedCount(done);
       }
     }
-    await Promise.all(Array.from({ length: concurrency }, () => worker()));
+
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, list.length) }, () => worker()),
+    );
+
+    // 手动停止时把还停在 running 的源回落成 idle, 免得一直转圈
+    for (const s of list) {
+      if (snapshot[s.bookSourceUrl]?.status === "running") {
+        snapshot[s.bookSourceUrl] = { status: "idle", hits: 0, reason: "", at: 0 };
+      }
+    }
+    setProbes(snapshot);
     setRunning(false);
-    setKeywordIdx((i) => i + 1);
+    setLastRunAt(Date.now());
+    saveRun(snapshot, kw);
+    // 词表轮换, 下次换个关键词再测一遍
+    setKeyword((prev) => {
+      const i = PROBE_KEYWORDS.indexOf(prev);
+      return PROBE_KEYWORDS[(i + 1) % PROBE_KEYWORDS.length]!;
+    });
   }
 
-  /** 全选失效源 */
-  function selectAllFailed() {
-    setSelected(new Set(failedUrls.map((s) => s.bookSourceUrl)));
+  function stopProbe() {
+    cancelRef.current = true;
+  }
+
+  /** 按结论全选(只作用于当前分组) */
+  function selectStatuses(statuses: ProbeStatus[]) {
+    setSelected(
+      new Set(
+        scopedSources
+          .filter((s) => statuses.includes(probes[s.bookSourceUrl]?.status ?? "idle"))
+          .map((s) => s.bookSourceUrl),
+      ),
+    );
   }
 
   async function handleDelete() {
     const urls = [...selected];
     await deleteMutation.mutateAsync(urls);
-    // 从体检结果里移除已删源
     setProbes((prev) => {
       const next = { ...prev };
       for (const u of urls) delete next[u];
+      saveRun(next, keyword);
       return next;
     });
     setSelected(new Set());
@@ -147,81 +258,175 @@ export default function SourceHealthPage() {
     });
   }
 
+  const hasRun = counts.ok + counts.empty + counts.fail > 0;
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <PageIntro
-        eyebrow="源中心"
+        eyebrow="工具箱 · 源中心"
         title="书源体检"
-        desc="逐源真跑一次搜索，找出失效源并批量清理。"
+        desc="逐源真跑一次搜索, 把源分成「正常 / 无结果 / 失效」三类, 一键清理坏源; 结果会记住, 下次进来还在."
       />
 
-      <div className="flex items-center gap-3">
-        <Button
-          onClick={runProbe}
-          disabled={running || enabledSources.length === 0}
-        >
-          {running ? (
-            <Spinner className="size-4" />
-          ) : (
+      {/* 工具栏 */}
+      <div className="flex flex-wrap items-center gap-3">
+        {running ? (
+          <Button onClick={stopProbe} variant="secondary">
+            <Square className="size-4" />
+            停止（{checkedCount}/{probeTotal}）
+          </Button>
+        ) : (
+          <Button onClick={() => void runProbe()} disabled={scopedSources.length === 0}>
             <Search className="size-4" />
-          )}
-          {running ? `体检中 ${checkedCount}/${enabledSources.length}` : "开始体检"}
-        </Button>
+            开始体检
+          </Button>
+        )}
         <Button variant="ghost" onClick={() => void refetch()} disabled={isFetching}>
           <RefreshCw className={cn("size-4", isFetching && "animate-spin")} />
           刷新书源
         </Button>
-        {!running && checkedCount > 0 && (
-          <span className="text-sm text-muted-foreground">
-            可用 <span className="font-semibold text-foreground">{okCount}</span> · 失效{" "}
-            <span className="font-semibold text-danger">{failedUrls.length}</span>
-          </span>
-        )}
+        <span className="text-sm text-muted-foreground">
+          关键词 <span className="font-medium text-foreground">「{keyword}」</span>
+          {lastRunAt > 0 ? ` · 上次体检 ${formatAgo(lastRunAt)}` : null}
+        </span>
       </div>
 
+      {/* 结论统计: 点一下筛到那一类, 再点回到全部 */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <StatCard
+          label="正常"
+          value={counts.ok}
+          tone="ok"
+          active={statusFilter === "ok"}
+          onClick={() => setStatusFilter(statusFilter === "ok" ? "all" : "ok")}
+        />
+        <StatCard
+          label="无结果"
+          value={counts.empty}
+          tone="warn"
+          active={statusFilter === "empty"}
+          onClick={() => setStatusFilter(statusFilter === "empty" ? "all" : "empty")}
+        />
+        <StatCard
+          label="失效"
+          value={counts.fail}
+          tone="danger"
+          active={statusFilter === "fail"}
+          onClick={() => setStatusFilter(statusFilter === "fail" ? "all" : "fail")}
+        />
+        <StatCard
+          label="未检测"
+          value={counts.idle + counts.running}
+          tone="muted"
+          active={statusFilter === "idle"}
+          onClick={() => setStatusFilter(statusFilter === "idle" ? "all" : "idle")}
+        />
+      </div>
+
+      {/* 分组 + 状态筛选 */}
+      <div className="flex flex-col gap-2">
+        <SourceGroupTabs
+          groups={groupItems}
+          value={group}
+          onChange={setGroup}
+          controlsId="health-list"
+          className="min-w-0"
+        />
+        <div className="scroll-x-implicit flex items-center gap-1.5">
+          {STATUS_FILTERS.map((item) => {
+            const active = statusFilter === item.value;
+            const count =
+              item.value === "all"
+                ? scopedSources.length
+                : item.value === "fail"
+                  ? counts.fail
+                  : item.value === "empty"
+                    ? counts.empty
+                    : item.value === "ok"
+                      ? counts.ok
+                      : counts.idle + counts.running;
+            return (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => setStatusFilter(item.value)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1 text-xs transition-colors",
+                  active
+                    ? "border-accent bg-accent/10 font-medium text-accent"
+                    : "border-border text-muted-foreground hover:bg-surface-muted hover:text-foreground",
+                )}
+              >
+                {item.label}
+                <span className="ml-1 tabular-nums opacity-70">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 清理条 */}
+      {cleanableCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-danger/30 bg-danger/5 px-4 py-3">
+          <span className="text-sm">
+            本组可清理 <span className="font-semibold text-danger">{cleanableCount}</span> 个（失效{" "}
+            {counts.fail} · 无结果 {counts.empty}）
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={() => selectStatuses(["fail"])}>
+              全选失效
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => selectStatuses(["empty"])}>
+              全选无结果
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => selectStatuses(["fail", "empty"])}>
+              全选可清理
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              disabled={selected.size === 0}
+              onClick={() => setConfirmOpen(true)}
+            >
+              <Trash2 className="size-4" />
+              删除选中（{selected.size}）
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* 列表 */}
       {isLoading ? (
         <div className="flex justify-center py-16">
           <Spinner className="size-6" />
         </div>
       ) : enabledSources.length === 0 ? (
-        <EmptyState title="没有启用的书源" description="先去「书源」页导入并启用书源，再来体检。" />
+        <EmptyState
+          title="没有启用的书源"
+          description="先去「书源」页导入并启用书源，再来体检。"
+        />
+      ) : visibleSources.length === 0 ? (
+        <EmptyState
+          title={hasRun ? "这一类里没有书源" : "还没开始体检"}
+          description={
+            hasRun
+              ? "换个筛选条件看看，或者切到别的分组。"
+              : "点上面的「开始体检」，逐源跑一次搜索就知道谁还能用。"
+          }
+        />
       ) : (
-        <div className="flex flex-col gap-1">
-          {/* 失效源汇总条 */}
-          {failedUrls.length > 0 && (
-            <div className="mb-3 flex items-center justify-between rounded-lg border border-danger/30 bg-danger/5 px-4 py-3">
-              <span className="text-sm">
-                发现 <span className="font-semibold text-danger">{failedUrls.length}</span> 个失效源
-              </span>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="ghost" onClick={selectAllFailed}>
-                  全选失效源
-                </Button>
-                <Button
-                  size="sm"
-                  variant="danger"
-                  disabled={selected.size === 0}
-                  onClick={() => setConfirmOpen(true)}
-                >
-                  <Trash2 className="size-4" />
-                  删除选中 ({selected.size})
-                </Button>
-              </div>
-            </div>
-          )}
-
-          <ul className="divide-y divide-border/60">
-            {enabledSources.map((src) => (
-              <SourceHealthRow
-                key={src.bookSourceUrl}
-                source={src}
-                probe={probes[src.bookSourceUrl]}
-                checked={selected.has(src.bookSourceUrl)}
-                onToggle={() => toggleSelect(src.bookSourceUrl)}
-              />
-            ))}
-          </ul>
-        </div>
+        <ul id="health-list" className="divide-y divide-border/60 border-y border-border/60">
+          {visibleSources.map((src) => (
+            <SourceHealthRow
+              key={src.bookSourceUrl}
+              source={src}
+              probe={probes[src.bookSourceUrl]}
+              keyword={keyword}
+              checked={selected.has(src.bookSourceUrl)}
+              onToggle={() => toggleSelect(src.bookSourceUrl)}
+            />
+          ))}
+        </ul>
       )}
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -239,7 +444,7 @@ export default function SourceHealthPage() {
             <Button
               variant="danger"
               loading={deleteMutation.isPending}
-              onClick={handleDelete}
+              onClick={() => void handleDelete()}
             >
               确认删除
             </Button>
@@ -250,28 +455,71 @@ export default function SourceHealthPage() {
   );
 }
 
+/** 统计卡: 点一下筛选到该类, 再点回到全部 */
+function StatCard({
+  label,
+  value,
+  tone,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  tone: "ok" | "warn" | "danger" | "muted";
+  active: boolean;
+  onClick: () => void;
+}) {
+  const toneClass =
+    tone === "ok"
+      ? "text-success"
+      : tone === "warn"
+        ? "text-warn"
+        : tone === "danger"
+          ? "text-danger"
+          : "text-muted-foreground";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-colors",
+        active ? "border-accent bg-accent/10" : "border-border bg-surface/60 hover:bg-surface-muted",
+      )}
+    >
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className={cn("text-xl leading-none font-semibold tabular-nums", toneClass)}>
+        {value}
+      </span>
+    </button>
+  );
+}
+
 function SourceHealthRow({
   source,
   probe,
+  keyword,
   checked,
   onToggle,
 }: {
   source: BookSource;
   probe?: ProbeState;
+  keyword: string;
   checked: boolean;
   onToggle: () => void;
 }) {
   const status = probe?.status ?? "idle";
+  const selectable = status === "fail" || status === "empty";
+
   return (
     <li
       className={cn(
-        "flex items-center gap-3 px-3 py-2.5",
-        status === "fail" && "cursor-pointer",
+        "flex items-start gap-3 px-3 py-2.5",
+        selectable && "cursor-pointer hover:bg-surface-muted/60",
       )}
-      onClick={status === "fail" ? onToggle : undefined}
+      onClick={selectable ? onToggle : undefined}
     >
-      {/* 复选框：仅失效源可勾选 */}
-      {status === "fail" ? (
+      {selectable ? (
         <button
           type="button"
           aria-label={checked ? "取消选择" : "选择"}
@@ -280,30 +528,30 @@ function SourceHealthRow({
             onToggle();
           }}
           className={cn(
-            "flex size-5 items-center justify-center rounded border",
-            checked
-              ? "border-danger bg-danger text-white"
-              : "border-border bg-background",
+            "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded border",
+            checked ? "border-danger bg-danger text-white" : "border-border bg-background",
           )}
         >
           {checked && <CheckCircle2 className="size-4" />}
         </button>
       ) : (
-        <span className="flex size-5 items-center justify-center" />
+        <span className="mt-0.5 size-5 shrink-0" />
       )}
 
-      {/* 源名称 */}
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{source.bookSourceName}</p>
-        {source.bookSourceGroup && (
-          <p className="truncate text-xs text-muted-foreground">
-            {source.bookSourceGroup}
-          </p>
-        )}
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+          {source.bookSourceGroup || "未分组"}
+          {status === "fail" && probe?.reason ? (
+            <span className="ml-2 text-danger/90">· {probe.reason}</span>
+          ) : null}
+          {status === "empty" ? (
+            <span className="ml-2 text-warn">搜「{keyword}」0 条 · 源可能只收录特定书</span>
+          ) : null}
+        </p>
       </div>
 
-      {/* 状态 */}
-      <div className="flex items-center gap-2 text-sm">
+      <div className="flex shrink-0 items-center gap-2 text-sm">
         {status === "running" && (
           <span className="flex items-center gap-1 text-muted-foreground">
             <Spinner className="size-4" /> 检测中
@@ -312,14 +560,17 @@ function SourceHealthRow({
         {status === "ok" && (
           <span className="flex items-center gap-1 text-success">
             <CheckCircle2 className="size-4" />
-            {probe?.hits ?? 0} 本
+            正常 · {probe?.hits ?? 0} 本
+          </span>
+        )}
+        {status === "empty" && (
+          <span className="flex items-center gap-1 text-warn">
+            <CircleSlash className="size-4" />
+            无结果
           </span>
         )}
         {status === "fail" && (
-          <span
-            className="flex items-center gap-1 text-danger"
-            title={probe?.reason}
-          >
+          <span className="flex items-center gap-1 text-danger" title={probe?.reason}>
             <XCircle className="size-4" />
             失效
           </span>
@@ -333,4 +584,14 @@ function SourceHealthRow({
       </div>
     </li>
   );
+}
+
+function formatAgo(ts: number): string {
+  const diff = Date.now() - ts;
+  if (diff < 60_000) return "刚刚";
+  const min = Math.floor(diff / 60_000);
+  if (min < 60) return `${min} 分钟前`;
+  const hour = Math.floor(min / 60);
+  if (hour < 24) return `${hour} 小时前`;
+  return `${Math.floor(hour / 24)} 天前`;
 }

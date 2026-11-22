@@ -30,6 +30,12 @@ interface ChapterRow {
   length: number;
 }
 
+/** 单书缓存统计: 已缓存章数 + 正文字节数 */
+interface CacheStat {
+  cached: number;
+  size: number;
+}
+
 /**
  * 缓存管理：整本缓存清单 + 换源保留缓存。
  *
@@ -39,13 +45,67 @@ interface ChapterRow {
 export default function CacheManagePage() {
   const { books, isLoading } = useBookshelf();
   const [selected, setSelected] = React.useState<Book | null>(null);
+  const [stats, setStats] = React.useState<Record<string, CacheStat>>({});
+  const [statsLoading, setStatsLoading] = React.useState(false);
+
+  // 每本书的已缓存章数: 页级统一拉一次(受控并发), 行内直接用, 顺带累加出总览
+  React.useEffect(() => {
+    if (books.length === 0) {
+      setStats({});
+      setStatsLoading(false);
+      return;
+    }
+    let alive = true;
+    setStatsLoading(true);
+    const next: Record<string, CacheStat> = {};
+    const queue = books.map((b) => b.bookUrl);
+
+    async function worker() {
+      while (queue.length > 0) {
+        const url = queue.shift();
+        if (!url) break;
+        try {
+          const r = await listChapterCache(url);
+          next[url] = { cached: r.total, size: r.rows.reduce((acc, row) => acc + row.length, 0) };
+        } catch {
+          next[url] = { cached: 0, size: 0 };
+        }
+        if (alive) setStats({ ...next });
+      }
+    }
+
+    void Promise.all(Array.from({ length: Math.min(4, books.length) }, () => worker())).then(() => {
+      if (alive) setStatsLoading(false);
+    });
+
+    return () => {
+      alive = false;
+    };
+  }, [books]);
+
+  const summary = React.useMemo(() => {
+    let total = 0;
+    let cached = 0;
+    let size = 0;
+    for (const book of books) {
+      total += book.totalChapterNum ?? 0;
+      const st = stats[book.bookUrl];
+      if (st) {
+        cached += st.cached;
+        size += st.size;
+      }
+    }
+    // 没缓存满时向下取整, 免得 1314/1316 也显示 100%
+    const pct = total > 0 ? (cached >= total ? 100 : Math.floor((cached / total) * 100)) : 0;
+    return { total, cached, size, pct };
+  }, [books, stats]);
 
   return (
     <div className="flex flex-col gap-6">
       <PageIntro
-        eyebrow="偏好与数据"
+        eyebrow="工具箱 · 偏好与数据"
         title="缓存管理"
-        desc="查看每本书的正文缓存，换源时先搬缓存再切换，已缓存章节无缝保留。"
+        desc="查看每本书「共多少章 / 已缓存多少章」，换源时先搬缓存再切换，已缓存章节无缝保留。"
       />
 
       {isLoading ? (
@@ -55,11 +115,42 @@ export default function CacheManagePage() {
       ) : books.length === 0 ? (
         <EmptyState title="书架为空" description="先把书加入书架，才能管理缓存。" />
       ) : (
-        <ul className="divide-y divide-border/60">
-          {books.map((book) => (
-            <BookCacheRow key={book.bookUrl} book={book} onOpen={() => setSelected(book)} />
-          ))}
-        </ul>
+        <>
+          {/* 总览: 书架规模 + 缓存覆盖率 */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-border/60 bg-surface/60 px-4 py-3 text-sm">
+            <span>
+              书架 <span className="font-semibold tabular-nums">{books.length}</span> 本
+            </span>
+            <span>
+              共 <span className="font-semibold tabular-nums">{summary.total || "—"}</span> 章
+            </span>
+            <span>
+              已缓存{" "}
+              <span className="font-semibold text-accent tabular-nums">{summary.cached}</span> 章
+              {summary.total > 0 ? (
+                <span className="text-muted-foreground">（{summary.pct}%）</span>
+              ) : null}
+            </span>
+            <span className="text-muted-foreground">{formatBytes(summary.size)}</span>
+            {statsLoading ? (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Spinner className="size-3" />
+                统计中
+              </span>
+            ) : null}
+          </div>
+
+          <ul className="divide-y divide-border/60">
+            {books.map((book) => (
+              <BookCacheRow
+                key={book.bookUrl}
+                book={book}
+                info={stats[book.bookUrl] ?? null}
+                onOpen={() => setSelected(book)}
+              />
+            ))}
+          </ul>
+        </>
       )}
 
       <CacheDetailDialog book={selected} onClose={() => setSelected(null)} />
@@ -67,35 +158,36 @@ export default function CacheManagePage() {
   );
 }
 
-function BookCacheRow({ book, onOpen }: { book: Book; onOpen: () => void }) {
-  const [info, setInfo] = React.useState<{ total: number; size: number } | null>(null);
-
-  React.useEffect(() => {
-    let alive = true;
-    listChapterCache(book.bookUrl)
-      .then((r) => {
-        if (!alive) return;
-        const size = r.rows.reduce((acc, row) => acc + row.length, 0);
-        setInfo({ total: r.total, size });
-      })
-      .catch(() => {
-        if (alive) setInfo({ total: 0, size: 0 });
-      });
-    return () => {
-      alive = false;
-    };
-  }, [book.bookUrl]);
+function BookCacheRow({
+  book,
+  info,
+  onOpen,
+}: {
+  book: Book;
+  info: CacheStat | null;
+  onOpen: () => void;
+}) {
+  const bookTotal = book.totalChapterNum ?? 0;
+  /** 缓存覆盖率: 只在服务端给过目录总章数时才有意义 */
+  const pct =
+    bookTotal > 0 && info
+      ? info.cached >= bookTotal
+        ? 100
+        : Math.floor((info.cached / bookTotal) * 100)
+      : 0;
 
   return (
-    <li className="flex items-center gap-3 px-3 py-3">
+    <li className="flex items-start gap-3 px-3 py-3">
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{book.name}</p>
         <p className="truncate text-xs text-muted-foreground">
           {book.author}
           {info ? (
-            <span className="ml-2 inline-flex items-center gap-1">
+            <span className="ml-2 inline-flex flex-wrap items-center gap-1">
               <HardDrive className="size-3" />
-              {info.total} 章 · {formatBytes(info.size)}
+              共 {bookTotal > 0 ? bookTotal : "—"} 章 · 已缓存{" "}
+              <span className="font-medium text-foreground">{info.cached}</span> 章
+              {bookTotal > 0 ? ` · ${pct}%` : ""} · {formatBytes(info.size)}
             </span>
           ) : (
             <span className="ml-2 inline-flex items-center gap-1">
@@ -104,6 +196,22 @@ function BookCacheRow({ book, onOpen }: { book: Book; onOpen: () => void }) {
             </span>
           )}
         </p>
+        {/* 覆盖率进度条: 一眼看出这本书还差多少章没缓存 */}
+        {info && bookTotal > 0 ? (
+          <div
+            className="mt-1.5 h-1 w-full max-w-xs overflow-hidden rounded-full bg-border/70"
+            role="progressbar"
+            aria-valuenow={pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`已缓存 ${info.cached} / 共 ${bookTotal} 章`}
+          >
+            <div
+              className="h-full rounded-full bg-accent transition-[width] duration-300"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        ) : null}
       </div>
       <Button size="sm" variant="ghost" onClick={onOpen}>
         <Database className="size-4" />
@@ -147,6 +255,14 @@ function CacheDetailDialog({ book, onClose }: { book: Book | null; onClose: () =
 
   const totalSize = rows ? rows.reduce((acc, r) => acc + r.length, 0) : 0;
   const emptyCount = rows ? rows.filter((r) => r.length === 0).length : 0;
+  const bookTotal = book.totalChapterNum ?? 0;
+  const cachedCount = rows?.length ?? 0;
+  const pct =
+    bookTotal > 0
+      ? cachedCount >= bookTotal
+        ? 100
+        : Math.floor((cachedCount / bookTotal) * 100)
+      : 0;
 
   /** 换源：先搬缓存，成功后再 setBookSource */
   async function handleSwitch(candidate: AvailableBookSource) {
@@ -183,14 +299,41 @@ function CacheDetailDialog({ book, onClose }: { book: Book | null; onClose: () =
         <DialogHeader>
           <DialogTitle>《{book.name}》缓存</DialogTitle>
           <DialogDescription>
-            {rows
-              ? `${rows.length} 章 · 正文 ${formatBytes(totalSize)}` +
-                (emptyCount > 0 ? ` · ${emptyCount} 章为空` : "")
-              : "读取中…"}
+            {rows ? (
+              <>
+                已缓存 <span className="font-medium text-foreground">{cachedCount}</span> 章 / 共{" "}
+                {bookTotal > 0 ? `${bookTotal} 章` : "未知章"}（{pct}%）· 正文{" "}
+                {formatBytes(totalSize)}
+                {emptyCount > 0 ? ` · ${emptyCount} 章为空` : ""}
+              </>
+            ) : (
+              "读取中…"
+            )}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
+          {/* 缓存覆盖率 */}
+          {rows && bookTotal > 0 ? (
+            <div>
+              <div
+                className="h-1.5 w-full overflow-hidden rounded-full bg-border/70"
+                role="progressbar"
+                aria-valuenow={pct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`已缓存 ${cachedCount} / 共 ${bookTotal} 章`}
+              >
+                <div
+                  className="h-full rounded-full bg-accent transition-[width] duration-300"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                已缓存 {cachedCount} 章 · 还剩 {Math.max(0, bookTotal - cachedCount)} 章未缓存
+              </p>
+            </div>
+          ) : null}
           {/* 换源搬缓存 */}
           <div className="rounded-lg border border-border/60 p-4">
             <p className="mb-2 text-sm font-medium">换源（保留缓存）</p>
