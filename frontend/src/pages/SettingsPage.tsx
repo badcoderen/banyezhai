@@ -46,7 +46,7 @@ function InstallCard() {
         : "当前浏览器暂不提供安装入口";
   return (
     <SettingCard title="安装为应用" desc={desc}>
-      <SettingRow label="砚台 PWA" value="桌面/主屏图标 · 独立窗口 · 断网可用外壳(正文仍走书源)">
+      <SettingRow label="半页斋 PWA" value="桌面/主屏图标 · 独立窗口 · 断网可用外壳(正文仍走书源)">
         {installed ? (
           <span className="text-xs text-muted-foreground">已安装</span>
         ) : (
@@ -106,8 +106,8 @@ export default function SettingsPage() {
         <div className="flex flex-col gap-5">
           <WebdavPanel />
           <CacheCard />
-          <SettingCard title="关于" desc="砚台 · 安静地陪你读完每一本">
-            <SettingRow label="前端" value={`砚台 React 阅读器 · v${appVersion}`} />
+          <SettingCard title="关于" desc="badcode 的半页斋 · 安静地陪你读完每一本">
+            <SettingRow label="前端" value={`半页斋 React 阅读器 · v${appVersion}`} />
             <SettingRow
               label="运行模式"
               value={mode === "single" ? "单用户(无需登录)" : "多用户(需登录)"}

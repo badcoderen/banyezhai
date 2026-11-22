@@ -14,6 +14,8 @@ const ShelfPage = lazyPage(() => import("@/pages/ShelfPage"));
 const SearchPage = lazyPage(() => import("@/pages/SearchPage"));
 const LibraryPage = lazyPage(() => import("@/pages/LibraryPage"));
 const SourcesPage = lazyPage(() => import("@/pages/SourcesPage"));
+const SourceHealthPage = lazyPage(() => import("@/pages/SourceHealthPage"));
+const CacheManagePage = lazyPage(() => import("@/pages/CacheManagePage"));
 const SourceWorkbenchPage = lazyPage(() => import("@/pages/SourceWorkbenchPage"));
 const RssPage = lazyPage(() => import("@/pages/RssPage"));
 const PurifyPage = lazyPage(() => import("@/pages/PurifyPage"));
@@ -54,6 +56,8 @@ export default function App() {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/sources" element={<SourcesPage />} />
+          <Route path="/source-health" element={<SourceHealthPage />} />
+          <Route path="/cache-manage" element={<CacheManagePage />} />
           <Route path="/workbench" element={<SourceWorkbenchPage />} />
           <Route path="/rss" element={<RssPage />} />
           <Route path="/purify" element={<PurifyPage />} />

@@ -2421,6 +2421,119 @@ impl Storage {
         Ok((count, size))
     }
 
+    /// 换源搬缓存：把旧书 book_url 下的正文缓存行搬到新书下。
+    ///
+    /// 换源时后端 setBookSource 会作废旧缓存，但用户往往希望「已缓存的章节不动、
+    /// 无缝继续」。book_chapters 主键 (book_url, chapter_index, user_namespace)，
+    /// chapter_index 是章节 URL 的哈希（chapter_url_hash），换源前后章节 URL 可能不同，
+    /// 所以按 chapter_index 原样搬（旧哈希保留，前端用旧 URL 请求时能命中同一哈希）。
+    /// 目标已有的索引不覆盖（保护新源已抓的章）。
+    ///
+    /// 返回 (找到的旧行数, 实际搬入的行数, 目标书当前总行数)。
+    pub async fn migrate_chapter_cache(
+        &self,
+        ns: &str,
+        src_url: &str,
+        dst_url: &str,
+    ) -> Result<(i64, u64, i64)> {
+        let found: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM book_chapters WHERE book_url = ?1 AND user_namespace = ?2",
+        )
+        .bind(src_url)
+        .bind(ns)
+        .fetch_one(&self.pool)
+        .await?;
+
+        if found == 0 {
+            let total: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM book_chapters WHERE book_url = ?1 AND user_namespace = ?2",
+            )
+            .bind(dst_url)
+            .bind(ns)
+            .fetch_one(&self.pool)
+            .await?;
+            return Ok((0, 0, total));
+        }
+
+        let r = sqlx::query(
+            "INSERT OR IGNORE INTO book_chapters \
+             (book_url, chapter_index, title, content, user_namespace) \
+             SELECT ?1, chapter_index, title, content, user_namespace \
+             FROM book_chapters WHERE book_url = ?2 AND user_namespace = ?3",
+        )
+        .bind(dst_url)
+        .bind(src_url)
+        .bind(ns)
+        .execute(&self.pool)
+        .await?;
+
+        let total: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM book_chapters WHERE book_url = ?1 AND user_namespace = ?2",
+        )
+        .bind(dst_url)
+        .bind(ns)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok((found, r.rows_affected(), total))
+    }
+
+    /// 整本的缓存清单（chapter_index + 标题 + 正文长度），不受上游 getBookCacheChapters
+    /// 200 条上限影响。用于缓存管理面板展示「已缓存多少章、各章状态」。
+    pub async fn list_chapter_cache(
+        &self,
+        ns: &str,
+        book_url: &str,
+    ) -> Result<Vec<(i64, String, i64)>> {
+        let rows: Vec<(i64, String, i64)> = sqlx::query_as(
+            "SELECT chapter_index, title, COALESCE(length(content), 0) \
+             FROM book_chapters WHERE book_url = ?1 AND user_namespace = ?2",
+        )
+        .bind(book_url)
+        .bind(ns)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
+    }
+
+    /// 换源留下的「章节标题 → 旧章节地址」映射（按用户命名空间隔离）。
+    ///
+    /// 浏览器 localStorage 清一次就没了，而这个映射直接决定换源后还要不要重下一遍，
+    /// 所以往库里也存一份（跨设备、跨清缓存都能捡回来）。
+    pub async fn get_swap_alias(&self, ns: &str, book_url: &str) -> Result<Option<String>> {
+        let row: Option<String> = sqlx::query_scalar(
+            "SELECT alias FROM sc_swap_alias WHERE book_url = ?1 AND user_namespace = ?2",
+        )
+        .bind(book_url)
+        .bind(ns)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row)
+    }
+
+    /// 写入换源映射（INSERT OR REPLACE）。
+    pub async fn set_swap_alias(&self, ns: &str, book_url: &str, alias: &str) -> Result<()> {
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS sc_swap_alias (\
+             book_url TEXT NOT NULL, user_namespace TEXT NOT NULL, \
+             alias TEXT NOT NULL, updated_at INTEGER NOT NULL, \
+             PRIMARY KEY (book_url, user_namespace))",
+        )
+        .execute(&self.pool)
+        .await?;
+        sqlx::query(
+            "INSERT OR REPLACE INTO sc_swap_alias \
+             (book_url, user_namespace, alias, updated_at) \
+             VALUES (?1, ?2, ?3, strftime('%s','now'))",
+        )
+        .bind(book_url)
+        .bind(ns)
+        .bind(alias)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
     /// 全书搜索：book_chapters 正文 LIKE 匹配（key 中 %/_ 转义为字面量），按章节序返回
     /// 命中章节（chapterIndex/title/snippet——命中段落前后截取），最多 limit 条
     pub async fn search_book_content(

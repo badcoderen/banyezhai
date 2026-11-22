@@ -1,4 +1,4 @@
-// 砚台 PWA Service Worker
+// 半页斋 PWA Service Worker
 //
 // 策略要点(与站点既有缓存方针保持一致):
 // - HTML(导航)永远 network-first: 入口 index.html 不发版缓存, 保证新版前端即时生效;
@@ -7,10 +7,10 @@
 // - /reader3/*(全部 API, 含 SSE)、/assets/proxy、/tts-gateway/* 一律直连不拦截:
 //   接口数据与流式响应绝不进缓存。
 // - 封面 /assets/*/covers/* 用 stale-while-revalidate: 秒开且后台更新。
-const VERSION = "v1";
-const STATIC_CACHE = `yantai-static-${VERSION}`;
-const PAGE_CACHE = `yantai-page-${VERSION}`;
-const COVER_CACHE = `yantai-cover-${VERSION}`;
+const VERSION = "v2";
+const STATIC_CACHE = `banyezhai-static-${VERSION}`;
+const PAGE_CACHE = `banyezhai-page-${VERSION}`;
+const COVER_CACHE = `banyezhai-cover-${VERSION}`;
 const KEEP = new Set([STATIC_CACHE, PAGE_CACHE, COVER_CACHE]);
 const PRECACHE = ["/", "/favicon.svg", "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png"];
 
@@ -20,7 +20,7 @@ const BYPASS = [/^\/reader3\//, /^\/assets\/proxy/, /^\/tts-gateway\//];
 const OFFLINE_HTML = `<!doctype html>
 <html lang="zh-CN"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>砚台 · 离线</title>
+<title>半页斋 · 离线</title>
 <style>
   html,body{height:100%;margin:0;background:#fcfaf6;color:#1c1917;
     font-family:system-ui,-apple-system,"Noto Sans SC",sans-serif}

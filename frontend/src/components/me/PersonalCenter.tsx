@@ -205,7 +205,7 @@ export function PersonalCenter() {
                   </Button>
                 </SettingRow>
               </SettingCard>
-              <SettingCard title="关于" desc="砚台 · 在线小说阅读">
+              <SettingCard title="关于" desc="badcode 的半页斋 · 在线小说阅读">
                 <SettingRow label="书源" value="兼容 legado 规则, 可导入 .json 书源" />
                 <SettingRow label="数据" value="书架与进度保存在你自己的服务器上" />
               </SettingCard>

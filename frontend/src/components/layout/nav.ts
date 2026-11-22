@@ -2,9 +2,11 @@ import {
   BookOpen,
   BookText,
   Compass,
+  Database,
   Rss,
   Search,
   Settings2,
+  ShieldCheck,
   Sparkles,
   UserRound,
   UsersRound,
@@ -46,6 +48,20 @@ export const MOBILE_NAV_ITEMS: NavItem[] = NAV_ITEMS.filter((item) =>
 /** 分隔线之后的次级导航项: 净化是给书源出问题的人用的, 不是每天要点的入口 */
 export const ADVANCED_NAV_ITEM: NavItem = { to: "/purify", label: "净化", icon: Sparkles };
 
+/** 书源体检：主动批量探测失效源并一键清理（源中心次级入口） */
+export const SOURCE_HEALTH_NAV_ITEM: NavItem = {
+  to: "/source-health",
+  label: "书源体检",
+  icon: ShieldCheck,
+};
+
+/** 缓存管理：整本缓存清单 + 换源保留缓存（偏好与数据次级入口） */
+export const CACHE_MANAGE_NAV_ITEM: NavItem = {
+  to: "/cache-manage",
+  label: "缓存管理",
+  icon: Database,
+};
+
 /** 分隔线之后的独立导航项 */
 export const SETTINGS_NAV_ITEM: NavItem = { to: "/settings", label: "设置", icon: Settings2 };
 
@@ -65,6 +81,8 @@ export const ROUTE_META: Record<string, RouteMeta> = {
   "/search": { kicker: "我的阅读空间", title: "搜索" },
   "/library": { kicker: "我的阅读空间", title: "书海" },
   "/sources": { kicker: "源中心", title: "书源" },
+  "/source-health": { kicker: "源中心", title: "书源体检" },
+  "/cache-manage": { kicker: "偏好与数据", title: "缓存管理" },
   "/rss": { kicker: "我的阅读空间", title: "RSS 订阅" },
   "/purify": { kicker: "偏好与数据", title: "正文净化" },
   "/settings": { kicker: "偏好与数据", title: "设置" },

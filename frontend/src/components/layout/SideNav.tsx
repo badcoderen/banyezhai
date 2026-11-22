@@ -1,12 +1,14 @@
-import { BookOpen, PanelLeft } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 import { NavLink, useMatch } from "react-router-dom";
 
 import { useAppMode } from "@/hooks/useAppMode";
 import {
   ADMIN_NAV_ITEM,
   ADVANCED_NAV_ITEM,
+  CACHE_MANAGE_NAV_ITEM,
   NAV_ITEMS,
   SETTINGS_NAV_ITEM,
+  SOURCE_HEALTH_NAV_ITEM,
   type NavItem,
 } from "./nav";
 import { Tooltip, cn } from "@/components/ui";
@@ -82,13 +84,13 @@ export function SideNavContent({ collapsed, onNavigate, onToggleCollapse }: Side
           collapsed ? "justify-center" : "px-4",
         )}
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-          <BookOpen className="size-4" aria-hidden />
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg overflow-hidden">
+          <img src="/icon-96.png" alt="半页斋" className="size-9 object-cover" />
         </span>
         {collapsed ? null : (
           <div className="min-w-0">
-            <p className="font-display text-lg leading-none font-semibold">砚台</p>
-            <p className="mt-1 text-[10px] tracking-[0.2em] text-muted-foreground">READER DESK</p>
+            <p className="font-display text-lg leading-none font-semibold">半页斋</p>
+            <p className="mt-1 text-[10px] tracking-[0.2em] text-muted-foreground">BY BADCODE</p>
           </div>
         )}
       </div>
@@ -110,6 +112,8 @@ export function SideNavContent({ collapsed, onNavigate, onToggleCollapse }: Side
           <SideNavItem key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />
         ))}
         <div className="my-3 border-t border-border/60" />
+        <SideNavItem item={SOURCE_HEALTH_NAV_ITEM} collapsed={collapsed} onNavigate={onNavigate} />
+        <SideNavItem item={CACHE_MANAGE_NAV_ITEM} collapsed={collapsed} onNavigate={onNavigate} />
         <SideNavItem item={ADVANCED_NAV_ITEM} collapsed={collapsed} onNavigate={onNavigate} />
         <SideNavItem item={SETTINGS_NAV_ITEM} collapsed={collapsed} onNavigate={onNavigate} />
         {isAdmin ? (

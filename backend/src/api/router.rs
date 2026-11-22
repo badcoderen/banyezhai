@@ -348,6 +348,11 @@ pub fn router(config: crate::AppConfig, storage: Storage) -> axum::Router {
             get(get_cache_info).post(get_cache_info),
         )
         .route("/reader3/clearCache", post(clear_cache))
+        // 换源保留缓存（运维）：搬缓存行 / 整本缓存清单 / 换源映射持久化
+        .route("/reader3/migrateChapterCache", post(migrate_chapter_cache))
+        .route("/reader3/listChapterCache", post(list_chapter_cache))
+        .route("/reader3/getSwapAlias", post(get_swap_alias))
+        .route("/reader3/setSwapAlias", post(set_swap_alias))
         .route(
             "/reader3/searchBookContent",
             get(search_book_content).post(search_book_content),
@@ -2024,6 +2029,155 @@ async fn clear_cache(
         }
         Err(e) => {
             tracing::error!("clearCache 失败: {e}");
+            Json(ReturnData::err("系统错误"))
+        }
+    }
+}
+
+// ---------------- 换源保留缓存（运维） ----------------
+
+/// 从请求里取 bookUrl / from / to 参数（query 或 body 都支持，兼容前端两种传法）。
+fn body_param(params: &HashMap<String, String>, body: &Option<Bytes>, key: &str) -> String {
+    if let Some(v) = params.get(key) {
+        return v.clone();
+    }
+    if let Some(b) = body {
+        if let Ok(json) = serde_json::from_slice::<serde_json::Value>(b) {
+            if let Some(v) = json.get(key).and_then(|v| v.as_str()) {
+                return v.to_string();
+            }
+        }
+    }
+    String::new()
+}
+
+/// POST /reader3/migrateChapterCache：换源时把旧书缓存行搬到新书下。
+/// body/query: { from: 旧书 bookUrl, to: 新书 bookUrl }。
+/// 必须先搬缓存、成功后再 setBookSource（后端换源会作废旧缓存）。
+async fn migrate_chapter_cache(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+    headers: HeaderMap,
+    body: Option<Bytes>,
+) -> Json<ReturnData> {
+    let namespace = match resolve_namespace(&state, &params, &headers).await {
+        Ok(ns) => ns,
+        Err(ret) => return Json(ret),
+    };
+    let from = body_param(&params, &body, "from").trim().to_string();
+    let to = body_param(&params, &body, "to").trim().to_string();
+    if from.is_empty() || to.is_empty() {
+        return Json(ReturnData::err("缺少 from/to 参数"));
+    }
+    if from == to {
+        return Json(ReturnData::ok(serde_json::json!({
+            "found": 0, "moved": 0, "targetTotal": 0, "note": "同一地址，无需搬运",
+        })));
+    }
+    match state.storage.migrate_chapter_cache(&namespace, &from, &to).await {
+        Ok((found, moved, total)) => Json(ReturnData::ok(serde_json::json!({
+            "found": found, "moved": moved, "targetTotal": total,
+        }))),
+        Err(e) => {
+            tracing::error!("migrateChapterCache 失败: {e}");
+            Json(ReturnData::err("系统错误"))
+        }
+    }
+}
+
+/// POST /reader3/listChapterCache：整本缓存清单（chapter_index + 标题 + 正文长度）。
+async fn list_chapter_cache(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+    headers: HeaderMap,
+    body: Option<Bytes>,
+) -> Json<ReturnData> {
+    let namespace = match resolve_namespace(&state, &params, &headers).await {
+        Ok(ns) => ns,
+        Err(ret) => return Json(ret),
+    };
+    let url = body_param(&params, &body, "url").trim().to_string();
+    if url.is_empty() {
+        return Json(ReturnData::err("缺少 url 参数"));
+    }
+    match state.storage.list_chapter_cache(&namespace, &url).await {
+        Ok(rows) => {
+            let list: Vec<serde_json::Value> = rows
+                .into_iter()
+                .map(|(idx, title, len)| {
+                    serde_json::json!({ "chapterIndex": idx, "title": title, "length": len })
+                })
+                .collect();
+            Json(ReturnData::ok(serde_json::json!({ "url": url, "total": list.len(), "rows": list })))
+        }
+        Err(e) => {
+            tracing::error!("listChapterCache 失败: {e}");
+            Json(ReturnData::err("系统错误"))
+        }
+    }
+}
+
+/// POST /reader3/getSwapAlias：取换源映射（可选 body.alias 一并写入，做 upsert）。
+async fn get_swap_alias(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+    headers: HeaderMap,
+    body: Option<Bytes>,
+) -> Json<ReturnData> {
+    let namespace = match resolve_namespace(&state, &params, &headers).await {
+        Ok(ns) => ns,
+        Err(ret) => return Json(ret),
+    };
+    let url = body_param(&params, &body, "url").trim().to_string();
+    if url.is_empty() {
+        return Json(ReturnData::err("缺少 url 参数"));
+    }
+    // 可选写入：带 alias 时先存，再读回（幂等 upsert）
+    if let Some(b) = &body {
+        if let Ok(json) = serde_json::from_slice::<serde_json::Value>(b) {
+            if let Some(alias) = json.get("alias") {
+                let alias_str = if alias.is_string() {
+                    alias.as_str().unwrap_or("").to_string()
+                } else {
+                    alias.to_string()
+                };
+                if let Err(e) = state.storage.set_swap_alias(&namespace, &url, &alias_str).await {
+                    tracing::error!("setSwapAlias 失败: {e}");
+                    return Json(ReturnData::err("系统错误"));
+                }
+            }
+        }
+    }
+    match state.storage.get_swap_alias(&namespace, &url).await {
+        Ok(Some(alias)) => Json(ReturnData::ok(serde_json::json!({ "url": url, "alias": alias }))),
+        Ok(None) => Json(ReturnData::ok(serde_json::json!({ "url": url, "alias": null }))),
+        Err(e) => {
+            tracing::error!("getSwapAlias 失败: {e}");
+            Json(ReturnData::err("系统错误"))
+        }
+    }
+}
+
+/// POST /reader3/setSwapAlias：写入换源映射。
+async fn set_swap_alias(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+    headers: HeaderMap,
+    body: Option<Bytes>,
+) -> Json<ReturnData> {
+    let namespace = match resolve_namespace(&state, &params, &headers).await {
+        Ok(ns) => ns,
+        Err(ret) => return Json(ret),
+    };
+    let url = body_param(&params, &body, "url").trim().to_string();
+    let alias = body_param(&params, &body, "alias");
+    if url.is_empty() {
+        return Json(ReturnData::err("缺少 url 参数"));
+    }
+    match state.storage.set_swap_alias(&namespace, &url, &alias).await {
+        Ok(()) => Json(ReturnData::ok(serde_json::json!({ "ok": true }))),
+        Err(e) => {
+            tracing::error!("setSwapAlias 失败: {e}");
             Json(ReturnData::err("系统错误"))
         }
     }

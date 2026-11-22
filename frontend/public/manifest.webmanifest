@@ -1,7 +1,7 @@
 {
-  "name": "砚台 · 在线小说阅读",
-  "short_name": "砚台",
-  "description": "多书源在线小说阅读器：书架、搜索、书海发现与沉浸式阅读。",
+  "name": "badcode 的半页斋 · 在线小说阅读",
+  "short_name": "半页斋",
+  "description": "badcode 的半页斋：多书源在线小说阅读器，书架、搜索、书海发现与沉浸式阅读。",
   "lang": "zh-CN",
   "dir": "ltr",
   "start_url": "/",
