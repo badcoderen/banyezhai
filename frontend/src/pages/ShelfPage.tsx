@@ -282,7 +282,7 @@ export default function ShelfPage() {
         action={
           <>
             <Input
-              className="w-56 sm:w-64"
+              className="min-w-0 flex-1 sm:w-64 sm:flex-none"
               aria-label="在书架中筛选"
               placeholder="搜索书名或作者"
               value={keyword}

@@ -101,6 +101,12 @@
     height: 100%;
   }
 
+  html {
+    /* iOS 横屏/放大字号会把文本二次放大, 关掉自动文字膨胀, 版式只认我们写的 px */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);
@@ -109,6 +115,8 @@
       "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* 兜底: 任何被写死的超宽元素都不得把文档撑出横向滚动条(iOS 会被拖动, 表现为左右被裁) */
+    overflow-x: clip;
     text-rendering: optimizeLegibility;
   }
 }
@@ -196,4 +204,18 @@
 .reader-figure[data-failed] {
   aspect-ratio: auto;
   display: none;
+}
+
+/* ---------- 移动端表单控件字号(iOS 自动放大修复) ----------
+ * iOS Safari / WKWebView(微信内置浏览器等)在聚焦 font-size < 16px 的输入框时,
+ * 会把页面整体放大且不自动缩回 —— 表现即「界面突然变大、左右各被裁掉一截、对不齐」。
+ * 组件里的输入框统一 text-sm(14px)/text-xs(12px), 所以在窄屏把真实控件顶到 16px。
+ * 只改字号, 不动高度与圆角; 写在 layer 之外, 优先级高于 text-sm 这类工具类。
+ */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
 }
