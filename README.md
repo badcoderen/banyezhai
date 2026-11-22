@@ -1,16 +1,34 @@
 <div align="center">
 
-# reader
+# 半页斋 · Banyezhai
 
-**自托管在线阅读服务 —— 多源搜索 · 书架 · 阅读器 · 换源 · 多级缓存 · TTS 朗读**
+**v1.0.0** · 自托管在线阅读服务 —— 多源搜索 · 书架 · 阅读器 · 换源 · 多级缓存 · TTS 朗读
 
 Rust(axum) + React · 单容器 · SQLite 单文件 · 数据全部留在自己机器上
-
-[![ci](https://github.com/hehecat/reader/actions/workflows/ci.yml/badge.svg)](https://github.com/hehecat/reader/actions/workflows/ci.yml)
 
 [快速开始](#快速开始) · [功能](#功能) · [配置](docs/configuration.md) · [运维](docs/operations.md) · [界面](docs/screenshots.md)
 
 </div>
+
+> ## 关于本仓库
+>
+> 这是 [hehecat/reader](https://github.com/hehecat/reader) 的二次开发版本，版本号 **v1.0.0**，依 GPL-3.0 协议开源。
+>
+> **在上游基础上的改动：**
+>
+> | 改动 | 说明 |
+> |---|---|
+> | 品牌 | 「砚台」→「半页斋 / BY BADCODE」，配「人 + 狗」插画图标 |
+> | 图标内联 | 侧边栏与登录页 logo 以 base64 内联进 JS bundle，不发起网络请求 —— 避免 Service Worker 的 stale-while-revalidate 把坏响应缓存后造成**永久破图** |
+> | 多用户 | 默认开启登录 / 注册 / 邀请码注册，管理员与普通用户按命名空间隔离数据 |
+> | 书源体检 | 由外挂脚本重写为 React 内置页面：受控并发逐源探活、支持批量清理失效源 |
+> | 缓存管理 | React 内置页面：查看整本缓存清单、**换源时迁移已缓存章节**并同步书源 |
+> | 书海分组 | 书海页新增按书源分组（`bookSourceGroup`）筛选，与书源页分类栏一致 |
+> | 构建修复 | `backend/scripts/*.sh`、`*.py` 统一为 LF 行尾，修复 Windows clone 后 CRLF 导致容器内 shebang 失效（exit 127） |
+>
+> **本仓库不含任何运行时数据** —— 没有书源、没有书籍、没有阅读记录、没有数据库。`reader.db`、`storage/`、封面缓存、本地书全部在 `.gitignore` 内。clone 下来是干净的空实例，首次启动自动建库。
+>
+> 上游的功能、配置、运维文档同样适用，见下方各节。
 
 ![reader 界面海报](https://cdn.jsdelivr.net/gh/hehecat/reader@main/docs/images/poster.png)
 
@@ -21,10 +39,14 @@ reader 把 legado 的书源规则搬进一个 Rust 单容器：多源并发搜�
 ## 快速开始
 
 ```bash
-git clone https://github.com/hehecat/reader.git
-cd reader/deploy
+git clone https://github.com/badcode1981/banyezhai.git
+cd banyezhai
+docker build -t banyezhai:latest .          # 本仓库不发布到 ghcr，镜像自行构建
+cd deploy
 docker compose up -d
 ```
+
+> 若 `deploy/docker-compose.yml` 里写的是上游镜像，把 `image` 改成 `banyezhai:latest` 即可。
 
 打开 `http://<机器IP>:8080`，注册即可用（默认单用户模式，无需 `.env`）。
 
@@ -37,7 +59,7 @@ docker compose up -d
 ```bash
 docker run -d --name reader -p 8080:8080 \
   -v "$PWD/data:/storage/storage" -e READER_APP_WORKDIR=/storage \
-  ghcr.io/hehecat/reader:latest
+  banyezhai:latest
 ```
 
 多用户：`cp .env.example .env`，设 `READER_APP_SECURE=true` 与 `READER_APP_INVITECODE=<邀请码>`，再 `docker compose up -d`。
