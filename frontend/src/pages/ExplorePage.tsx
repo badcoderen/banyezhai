@@ -8,6 +8,12 @@ import { ExploreBookGrid } from "@/components/explore/ExploreBookGrid";
 import { ExploreMenuTabs } from "@/components/explore/ExploreMenuTabs";
 import { ExplorePager } from "@/components/explore/ExplorePager";
 import { ExploreSourceSelect, type ExploreSource } from "@/components/explore/ExploreSourceSelect";
+import { SourceGroupTabs } from "@/components/sources/SourceGroupTabs";
+import {
+  SOURCE_GROUP_ALL,
+  SOURCE_GROUP_UNGROUPED,
+  buildSourceGroups,
+} from "@/components/sources/useSources";
 import {
   Button,
   DropdownMenu,
@@ -68,6 +74,26 @@ export default function ExplorePage() {
     [allExploreSources, isHiddenSource],
   );
   const hiddenByHealth = allExploreSources.length - exploreSources.length;
+
+  /** 书源类别(bookSourceGroup)筛选: 与书源页一致, 选中后书源下拉只显示该类别 */
+  const [activeGroup, setActiveGroup] = React.useState<string>(SOURCE_GROUP_ALL);
+  const groupItems = React.useMemo(
+    () => buildSourceGroups(exploreSources.map((item) => item.source)),
+    [exploreSources],
+  );
+  /** 当前类别可能因书源被删/隐藏而消失, 回落到「全部」 */
+  const currentGroup = React.useMemo(
+    () => (groupItems.some((item) => item.value === activeGroup) ? activeGroup : SOURCE_GROUP_ALL),
+    [groupItems, activeGroup],
+  );
+  const groupedExploreSources = React.useMemo(() => {
+    if (currentGroup === SOURCE_GROUP_ALL) return exploreSources;
+    return exploreSources.filter((item) =>
+      currentGroup === SOURCE_GROUP_UNGROUPED
+        ? item.source.bookSourceGroup.trim().length === 0
+        : item.source.bookSourceGroup === currentGroup,
+    );
+  }, [exploreSources, currentGroup]);
 
   /** 批量重新检测: 并发 3 只探每个源的首个发现分类, 结果写回本地(空源自动隐藏); 再次点击可中止 */
   const [probing, setProbing] = React.useState<{ done: number; total: number } | null>(null);
@@ -137,8 +163,8 @@ export default function ExplorePage() {
 
   // 选中的书源可能因停用/删除而消失, 回落到第一个可探索书源
   const active =
-    exploreSources.find((item) => item.source.bookSourceUrl === selection.sourceUrl) ??
-    exploreSources[0];
+    groupedExploreSources.find((item) => item.source.bookSourceUrl === selection.sourceUrl) ??
+    groupedExploreSources[0];
   const menus = active?.menus ?? [];
   const menuIndex = selection.menuIndex < menus.length ? selection.menuIndex : 0;
   const sourceUrl = active?.source.bookSourceUrl ?? "";
@@ -191,7 +217,7 @@ export default function ExplorePage() {
 
   const sourcesError = sourcesQuery.error;
   const noSources =
-    !sourcesQuery.isLoading && sourcesError === null && exploreSources.length === 0;
+    !sourcesQuery.isLoading && sourcesError === null && groupedExploreSources.length === 0;
 
   const openDetail = (target: SearchBook) => {
     setSelected(target);
@@ -215,7 +241,7 @@ export default function ExplorePage() {
         action={
           <>
             <ExploreSourceSelect
-              sources={exploreSources}
+              sources={groupedExploreSources}
               value={sourceUrl}
               onChange={(nextUrl) =>
                 setSelection({ sourceUrl: nextUrl, menuIndex: 0, page: 1 })
@@ -263,6 +289,18 @@ export default function ExplorePage() {
             {exploreSources.length} 个可探索书源 · 已隐藏 {hiddenByHealth} 个无内容源
           </p>
         ) : null}
+        {/* 按书源类别(bookSourceGroup)筛选: 选中后书源下拉与结果只来自该类别 */}
+        <SourceGroupTabs
+          groups={groupItems}
+          value={currentGroup}
+          onChange={(group) => {
+            setActiveGroup(group);
+            // 换类别后书源集变了, 复位选择(书源/分类/页码一起)
+            setSelection(INITIAL_SELECTION);
+          }}
+          controlsId={GRID_ID}
+          className="w-full"
+        />
         <ExploreMenuTabs
           menus={menus}
           value={menuIndex}

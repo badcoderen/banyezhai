@@ -7,7 +7,7 @@
 // - /reader3/*(全部 API, 含 SSE)、/assets/proxy、/tts-gateway/* 一律直连不拦截:
 //   接口数据与流式响应绝不进缓存。
 // - 封面 /assets/*/covers/* 用 stale-while-revalidate: 秒开且后台更新。
-const VERSION = "v2";
+const VERSION = "v3";
 const STATIC_CACHE = `banyezhai-static-${VERSION}`;
 const PAGE_CACHE = `banyezhai-page-${VERSION}`;
 const COVER_CACHE = `banyezhai-cover-${VERSION}`;

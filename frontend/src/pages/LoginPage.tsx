@@ -1,6 +1,7 @@
-import { BookOpen, Gift, Lock, User } from "lucide-react";
+import { Gift, Lock, User } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { BRAND_LOGO } from "@/brand-logo";
 import { Button, Input, Tabs, TabsList, TabsTrigger, toast } from "@/components/ui";
 import { resolveRedirect } from "@/hooks/useAuth";
 import { login } from "@/services/auth";
@@ -65,10 +66,10 @@ export default function LoginPage() {
     <div className="flex min-h-full items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-2">
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-accent text-accent-foreground shadow-sm">
-            <BookOpen className="size-6" aria-hidden />
+          <span className="flex size-12 items-center justify-center overflow-hidden rounded-2xl shadow-sm">
+            <img src={BRAND_LOGO} alt="半页斋" className="size-12 object-cover" />
           </span>
-          <h1 className="text-2xl font-semibold tracking-tight">阅读</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">半页斋</h1>
           <p className="text-sm text-muted-foreground">登录后同步书架与阅读进度</p>
         </div>
 

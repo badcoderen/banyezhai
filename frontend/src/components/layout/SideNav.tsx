@@ -1,6 +1,7 @@
 import { PanelLeft } from "lucide-react";
 import { NavLink, useMatch } from "react-router-dom";
 
+import { BRAND_LOGO } from "@/brand-logo";
 import { useAppMode } from "@/hooks/useAppMode";
 import {
   ADMIN_NAV_ITEM,
@@ -84,8 +85,8 @@ export function SideNavContent({ collapsed, onNavigate, onToggleCollapse }: Side
           collapsed ? "justify-center" : "px-4",
         )}
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg overflow-hidden">
-          <img src="/icon-96.png" alt="半页斋" className="size-9 object-cover" />
+        <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+          <img src={BRAND_LOGO} alt="半页斋" className="size-9 object-cover" />
         </span>
         {collapsed ? null : (
           <div className="min-w-0">
