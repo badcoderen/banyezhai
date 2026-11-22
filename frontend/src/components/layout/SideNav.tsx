@@ -1,4 +1,5 @@
 import { PanelLeft } from "lucide-react";
+import type { ReactNode } from "react";
 import { NavLink, useMatch } from "react-router-dom";
 
 import { BRAND_LOGO } from "@/brand-logo";
@@ -73,6 +74,20 @@ function SideNavItem({
   );
 }
 
+/** 分组小标(阅读空间 / 工具箱): 折叠成图标栏时只剩 sr-only, 不占高度 */
+function NavSectionLabel({ collapsed, children }: { collapsed: boolean; children: ReactNode }) {
+  return (
+    <p
+      className={cn(
+        "mt-1 mb-2 px-3 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground",
+        collapsed && "sr-only",
+      )}
+    >
+      {children}
+    </p>
+  );
+}
+
 /** 侧栏本体: 品牌块 + 分组导航 + 分隔线 + 设置项 + 折叠按钮, 桌面 aside 与移动 slide-over 共用. */
 export function SideNavContent({ collapsed, onNavigate, onToggleCollapse }: SideNavContentProps) {
   // 用户管理仅管理员可见(后端同样校验, 这里只是不暴露入口)
@@ -101,20 +116,15 @@ export function SideNavContent({ collapsed, onNavigate, onToggleCollapse }: Side
           collapsed ? "gap-1.5 px-2 py-3" : "gap-1 p-3",
         )}
       >
-        <p
-          className={cn(
-            "mb-2 px-3 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground",
-            collapsed && "sr-only",
-          )}
-        >
-          阅读空间
-        </p>
+        <NavSectionLabel collapsed={collapsed}>阅读空间</NavSectionLabel>
         {NAV_ITEMS.map((item) => (
           <SideNavItem key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />
         ))}
         <div className="my-3 border-t border-border/60" />
+        <NavSectionLabel collapsed={collapsed}>工具箱</NavSectionLabel>
         <SideNavItem item={SOURCE_HEALTH_NAV_ITEM} collapsed={collapsed} onNavigate={onNavigate} />
         <SideNavItem item={CACHE_MANAGE_NAV_ITEM} collapsed={collapsed} onNavigate={onNavigate} />
+        <div className="my-3 border-t border-border/60" />
         <SideNavItem item={ADVANCED_NAV_ITEM} collapsed={collapsed} onNavigate={onNavigate} />
         <SideNavItem item={SETTINGS_NAV_ITEM} collapsed={collapsed} onNavigate={onNavigate} />
         {isAdmin ? (
