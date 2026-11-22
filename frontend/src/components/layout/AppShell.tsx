@@ -41,7 +41,10 @@ export default function AppShell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar onOpenNav={() => setNavOpen(true)} />
         {/* pb-14: 让出底部标签栏的高度, 否则每页最后一行被它盖住 */}
-        <main id="main" className="min-h-0 flex-1 overflow-y-auto pb-14 md:pb-0">
+        {/* overflow-x-clip: overflow-y:auto 会让 overflow-x 的计算值变成 auto,
+            于是内容一旦超宽就能被横向拖走(iOS 上表现为整体左移、左侧被裁);
+            钉死 clip 后主体永远不产生横向滚动 */}
+        <main id="main" className="min-h-0 flex-1 overflow-x-clip overflow-y-auto pb-14 md:pb-0">
           <Outlet />
         </main>
       </div>
