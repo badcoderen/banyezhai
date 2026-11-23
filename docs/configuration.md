@@ -10,6 +10,31 @@ compose 默认挂 `deploy/storage/`(容器内 `/storage/storage`), 内含:
 - `reader.db.bak-*` — 启动前自动快照(保留 5 份, `READER_DB_BACKUP=0` 关)
 - 封面/本地书/WebDAV 数据
 
+## 本地书库(NAS/宿主机目录)
+
+不想逐本上传时, 把宿主机上的书目录**挂进书仓**就行 —— 文件放进去几秒内自动解析入架, 不用重启、不用点导入。
+
+容器内的书仓目录是 `storage/data/<命名空间>/books/`(递归扫描子目录)。compose 加一行只读挂载:
+
+```yaml
+    volumes:
+      - ./reader-data/storage:/storage/storage
+      # 宿主机书目录 → 书仓子目录(只读, reader 不会改动原文件)
+      - "/volume1/books/小说:/storage/storage/data/badcode/books/小说:ro"
+```
+
+`badcode` 是**用户命名空间**(`users.user_namespace`, 单用户模式是 `default`), 挂错命名空间就只在别人的书架里。多用户部署可以给每个成员挂各自目录。
+
+机制说明:
+
+- **新增/修改**: 文件出现或 mtime、大小变化 → 重新解析章节并更新书籍(保留阅读进度/书签/分组)。监听靠 inotify, bind mount 内同样生效, 实测 10s 内入库。
+- **删除**: 只把书标记为「文件已删」, 书架、进度、章节全部保留; 文件放回来自动重链, 不会重复导入。
+- **书名/作者**: 从文件名推断 —— `书名.txt`、`书名 作者：xx.txt`、`《书名》作者：xx.txt`、`书名 by xx.txt`; 批量书库的编号前缀(`0001001.盘龙`、`106网游之格斗`、`12_书名`)会自动去掉; 单字书名(「明」)保留。
+- **支持格式**: `epub / txt / mobi / azw3 / pdf / fb2 / docx / cbz / umd`(TXT 自动识别 UTF-8 / UTF-16 / GBK)。
+- **TXT 分章**: 用内置规则, 可在「设置 → TXT 目录规则」里覆盖; 识别不出章节时会按 1 万字切块。
+- **容量**: 每本约 5–10 MB 库空间(百万字级网文), 一次挂几千册会连续解析很久(CPU 单核跑满、库涨数 GB), 建议先挂一个子目录, 观察稳定后再加第二个。
+- 单用户部署也可用环境变量 `READER_LOCAL_BOOK_DIR=/books` 直接指定目录(该变量只映射 `default` 命名空间)。
+
 ## 环境变量
 
 | 变量 | 默认 | 说明 |

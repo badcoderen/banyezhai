@@ -391,16 +391,39 @@ async fn import_file(
         anyhow::bail!("未解析到章节内容");
     }
     let book_url = format!("local://{}", uuid::Uuid::new_v4());
-    let name = if imported.meta.title.is_empty() {
+    // 书名优先取文件名（去批量编号），其次首行（TXT 的 meta.title = 首行，很多
+    // 精校 txt 首行是「第一集 xx 第一章 xx」，直接用会把 100 本书都叫成章标题）
+    let file_name = path
+        .file_name()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let (file_title, file_author) = local_book::analyze_name_author(&file_name);
+    let title_len = file_title.chars().count();
+    // 单字书名（「明」「痒」）合法；纯数字文件名（1.txt）不可信
+    let title_ok =
+        title_len > 0 && title_len <= 60 && !file_title.chars().all(|c| c.is_ascii_digit());
+    let meta_title_ok = !imported.meta.title.is_empty()
+        && imported.meta.title.chars().count() <= 30
+        && !["简介", "目录", "正文", "内容简介"]
+            .iter()
+            .any(|k| imported.meta.title.contains(k));
+    let name = if title_ok {
+        file_title
+    } else if meta_title_ok {
+        imported.meta.title.clone()
+    } else {
         path.file_stem()
             .map(|s| s.to_string_lossy().into_owned())
             .unwrap_or_else(|| "本地书籍".to_string())
+    };
+    let author = if imported.meta.author.trim().is_empty() {
+        file_author
     } else {
-        imported.meta.title.clone()
+        imported.meta.author.clone()
     };
     let info = crate::model::book_chapter::BookInfo {
         name,
-        author: imported.meta.author.clone(),
+        author,
         kind: imported.meta.subjects.first().cloned(),
         intro: imported.meta.description.clone(),
         language: imported.meta.language.clone(),

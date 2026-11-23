@@ -50,10 +50,14 @@ pub fn local_book_type(ext: &str) -> i64 {
 /// 按序尝试 `《书名》作者：xx`、`《书名》`、`书名 作者：xx`、`书名 by xx`，
 /// 未命中时用 legacy BookHelp.formatBookName/formatBookAuthor 清洗。
 pub fn analyze_name_author(file_name: &str) -> (String, String) {
-    let stem = match file_name.rfind('.') {
+    let raw = match file_name.rfind('.') {
         Some(idx) if idx > 0 => &file_name[..idx],
         _ => file_name,
     };
+    // 批量书库常见编号前缀（0001001.盘龙 / 080.书名 / 12_书名）→ 去掉后再解析，
+    // 否则书香里全是「0001001.盘龙」这种名字
+    let stem = strip_serial_prefix(raw);
+    let stem = stem.as_str();
     // legacy LocalBook.nameAuthorPatterns（首个命中即返回）
     let patterns: [&str; 4] = [
         r"(.*?)《([^《》]+)》.*?作者：(.*)",
@@ -79,6 +83,34 @@ pub fn analyze_name_author(file_name: &str) -> (String, String) {
         String::new()
     };
     (name, author)
+}
+
+/// 去掉文件名前的批量编号：`0001001.盘龙` → `盘龙`、`080.书名` → `书名`、
+/// `12_书名` → `书名`、`106网游之格斗` → `网游之格斗`。
+/// 编号后要么跟分隔符，要么直接跟汉字（`106网游`），否则不动——避免误伤
+/// 「1984」这类纯数字书名。
+fn strip_serial_prefix(stem: &str) -> String {
+    // 编号位数不设死上限：起点书库常见 7 位（0001001.盘龙），老库常见 3 位（080.书名）
+    const RULES: [&str; 2] = [
+        r"^\s*\d{1,10}\s*[.．、,，_\-—:：]\s*",
+        r"^\s*\d{1,10}\s*(?=\p{Han})",
+    ];
+    let mut cur = stem.to_string();
+    for p in RULES {
+        if let Ok(re) = crate::util::regex::Regex::new(p) {
+            let next = re.replace_all(&cur, "").into_owned();
+            if next != cur {
+                cur = next;
+                break;
+            }
+        }
+    }
+    let cleaned = cur.trim();
+    if cleaned.is_empty() {
+        stem.to_string()
+    } else {
+        cleaned.to_string()
+    }
 }
 
 /// legacy BookHelp.formatBookName：去掉「作者 xx」/「xx 著」后缀
@@ -3915,6 +3947,30 @@ mod tests {
         assert_eq!(
             analyze_name_author("活着 余华 著.txt"),
             ("活着".to_string(), "余华".to_string())
+        );
+        // 批量书库编号前缀：0001001.盘龙 / 080.书名 / 12_书名
+        assert_eq!(
+            analyze_name_author("0001001.盘龙.txt"),
+            ("盘龙".to_string(), String::new())
+        );
+        assert_eq!(
+            analyze_name_author("080.金庸世界里的道士.txt"),
+            ("金庸世界里的道士".to_string(), String::new())
+        );
+        // 数字书名不能被当编号砍掉
+        assert_eq!(
+            analyze_name_author("1984.txt"),
+            ("1984".to_string(), String::new())
+        );
+        // 编号与书名之间无分隔符
+        assert_eq!(
+            analyze_name_author("106网游之格斗-战无不胜.txt"),
+            ("网游之格斗-战无不胜".to_string(), String::new())
+        );
+        // 单字书名
+        assert_eq!(
+            analyze_name_author("083.明.txt"),
+            ("明".to_string(), String::new())
         );
     }
 
