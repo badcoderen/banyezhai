@@ -781,7 +781,8 @@ mod tests {
         assert_eq!(books.len(), 1);
         let b = &books[0];
         assert!(b.book_url.starts_with("local://"));
-        assert_eq!(b.name, "第一章 起点", "TXT 首行应为书名");
+        // 书名取文件名：TXT 首行常是章标题（「第一章 起点」），不能用它当书名
+        assert_eq!(b.name, "测试书", "书名应取文件名而非 TXT 首行");
         assert_eq!(b.origin, "local");
         // 文件关联
         assert!(b
