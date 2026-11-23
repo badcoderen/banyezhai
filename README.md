@@ -40,8 +40,8 @@ reader 把 legado 的书源规则搬进一个 Rust 单容器：多源并发搜�
 ## 快速开始
 
 ```bash
-git clone https://github.com/badcode1981/banyezhai.git
-cd banyezhai
+git clone https://github.com/badcoderen/reader.git
+cd reader
 docker build -t banyezhai:latest .          # 本仓库不发布到 ghcr，镜像自行构建
 cd deploy
 docker compose up -d
