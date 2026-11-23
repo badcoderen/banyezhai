@@ -443,6 +443,7 @@ export function SettingsPanel() {
             value={theme}
             options={THEME_OPTIONS}
             onChange={setTheme}
+            columns="grid-cols-4"
           />
         </Field>
 

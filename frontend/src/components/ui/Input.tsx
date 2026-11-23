@@ -63,8 +63,8 @@ export function Input({
     <div
       className={cn(
         // min-w-0: 作为 flex 子项时 min-width:auto 会取到内容 min-content 而拒绝收缩(w-full 也压不住), 窄屏会顶出兄弟元素
-        "flex w-full min-w-0 items-center rounded-lg border bg-background text-foreground transition duration-150 ease-out focus-within:border-accent focus-within:ring-2 focus-within:ring-ring/70",
-        invalid ? "border-danger" : "border-border",
+        "flex w-full min-w-0 items-center rounded-[var(--radius-md)] border bg-surface text-foreground shadow-[var(--shadow-xs)] transition-[border-color,box-shadow,background-color] duration-150 ease-out focus-within:border-accent focus-within:bg-surface-elevated focus-within:shadow-[0_0_0_3px_var(--accent-soft)]",
+        invalid ? "border-danger" : "border-border hover:border-border-strong",
         disabled && "cursor-not-allowed opacity-50",
         sizeClass[size],
         className,

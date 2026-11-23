@@ -2,7 +2,15 @@ import { create } from "zustand";
 import { DEFAULT_TYPE_VOICES } from "@/lib/ttsRoles";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-export type ThemeMode = "light" | "dark" | "sepia" | "green" | "system";
+export type ThemeMode =
+  | "light"
+  | "dark"
+  | "sepia"
+  | "green"
+  | "solarized"
+  | "nord"
+  | "tokyo"
+  | "system";
 export type FontFamilyMode = "serif" | "sans" | "kai" | "custom";
 export type ReadMode = "scroll" | "page";
 /**

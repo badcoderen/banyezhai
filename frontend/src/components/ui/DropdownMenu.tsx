@@ -38,10 +38,10 @@ export const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 export const DropdownMenuSub = DropdownMenuPrimitive.Sub;
 
 const panelClass =
-  "ui-anchor z-100 min-w-40 overflow-hidden rounded-xl border border-border bg-surface p-1.5 text-foreground shadow-xl";
+  "ui-anchor z-100 min-w-40 overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface-elevated p-1.5 text-foreground shadow-[var(--shadow-lg)]";
 
 const itemClass =
-  "relative flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm outline-none transition duration-150 ease-out data-[highlighted]:bg-surface-muted data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground";
+  "relative flex cursor-pointer select-none items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-2 text-sm outline-none transition-colors duration-150 ease-out data-[highlighted]:bg-accent-soft data-[highlighted]:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground";
 
 /** 菜单浮层: 从触发点缩放展开, 自动避让视口边缘. */
 export function DropdownMenuContent({ className, sideOffset = 6, ...props }: DropdownMenuContentProps) {

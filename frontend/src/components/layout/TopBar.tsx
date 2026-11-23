@@ -35,7 +35,7 @@ export function TopBar({ onOpenNav }: TopBarProps) {
   const currentTheme = themeOption(theme);
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-border/70 bg-background/90 px-4 backdrop-blur sm:px-8">
+    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-border/60 bg-background/80 px-4 backdrop-blur-xl sm:px-8">
       <div className="flex min-w-0 items-center gap-3">
         <IconButton
           variant="ghost"
@@ -46,30 +46,43 @@ export function TopBar({ onOpenNav }: TopBarProps) {
           <PanelLeft aria-hidden />
         </IconButton>
         <div className="min-w-0">
-          <p className="truncate text-xs text-muted-foreground">{meta.kicker}</p>
+          <p className="truncate text-[10px] tracking-[0.16em] text-muted-foreground/80 uppercase">
+            {meta.kicker}
+          </p>
           {/* 顶栏只做面包屑: 页面唯一 h1 在 PageIntro, 这里再放一个大标题会与之抢层级 */}
           <p className="truncate text-sm font-medium">{meta.title}</p>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-3">
-        {/* 五档全露: 只给三档时选了羊皮纸/跟随系统的人看不到自己选了什么; 移动端隐藏(触控目标太小) */}
+      <div className="flex shrink-0 items-center gap-2.5">
+        {/* 主题菜单: 触发器直接显示当前主题的色板, 不用记名字也能认出选了什么 */}
         <div className="hidden sm:block">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
                 aria-label={`主题: ${currentTheme.label}`}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1.5 text-xs font-medium outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex cursor-pointer items-center gap-2 rounded-full border border-border bg-surface/80 py-1 pr-3 pl-1 text-xs font-medium shadow-[var(--shadow-xs)] outline-none transition-colors duration-150 ease-out hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <currentTheme.icon className="size-3.5" aria-hidden />
-                <span className="hidden sm:inline">{currentTheme.label}</span>
+                <span
+                  aria-hidden
+                  className="size-5 rounded-full ring-1 ring-border/80 ring-inset"
+                  style={{ background: currentTheme.swatch }}
+                />
+                <span>{currentTheme.label}</span>
+                <currentTheme.icon className="size-3.5 text-muted-foreground" aria-hidden />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel>界面与阅读主题</DropdownMenuLabel>
+              <DropdownMenuSeparator />
               <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as ThemeMode)}>
                 {THEME_OPTIONS.map((option) => (
                   <DropdownMenuRadioItem key={option.value} value={option.value}>
-                    <option.icon aria-hidden />
+                    <span
+                      aria-hidden
+                      className="size-4 shrink-0 rounded-full ring-1 ring-border/80 ring-inset"
+                      style={{ background: option.swatch }}
+                    />
                     {option.label}
                   </DropdownMenuRadioItem>
                 ))}
@@ -83,7 +96,7 @@ export function TopBar({ onOpenNav }: TopBarProps) {
             <IconButton
               variant="ghost"
               aria-label="账户菜单"
-              className="relative after:absolute after:-inset-1 after:content-['']"
+              className="relative rounded-full ring-1 ring-border/70 after:absolute after:-inset-1 after:content-['']"
             >
               <UserRound aria-hidden />
             </IconButton>

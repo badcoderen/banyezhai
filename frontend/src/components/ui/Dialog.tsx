@@ -47,7 +47,7 @@ export function DialogDescription({ className, ...props }: DialogDescriptionProp
 export function DialogOverlay({ className, ...props }: DialogOverlayProps) {
   return (
     <DialogPrimitive.Overlay
-      className={cn("ui-overlay fixed inset-0 z-50 bg-black/40", className)}
+      className={cn("ui-overlay fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px]", className)}
       {...props}
     />
   );
@@ -84,7 +84,7 @@ export function DialogContent({
       <div className="fixed inset-0 z-50 flex flex-col justify-end overflow-y-auto md:items-center md:justify-center md:p-4">
         <DialogPrimitive.Content
           className={cn(
-            "ui-dialog relative flex h-full w-full flex-col overflow-y-auto bg-surface text-foreground shadow-2xl outline-none md:h-auto md:max-h-full md:w-auto md:min-w-80 md:rounded-xl md:border md:shadow-2xl",
+            "ui-dialog relative flex h-full w-full flex-col overflow-y-auto bg-surface-elevated text-foreground shadow-2xl outline-none md:h-auto md:max-h-full md:w-auto md:min-w-80 md:rounded-[var(--radius-xl)] md:border md:shadow-[var(--shadow-lg)]",
             widthClass[width],
             className,
           )}

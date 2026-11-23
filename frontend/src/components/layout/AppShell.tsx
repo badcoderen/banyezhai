@@ -58,7 +58,7 @@ export default function AppShell() {
       {/* 移动端底部标签栏: 大拇指够得着的高频入口, 不用先点汉堡再选 */}
       <nav
         aria-label="主导航"
-        className="ui-safe-b ui-safe-x fixed inset-x-0 bottom-0 z-30 flex h-14 items-stretch border-t border-border/70 bg-background/95 backdrop-blur md:hidden"
+        className="ui-safe-b ui-safe-x fixed inset-x-0 bottom-0 z-30 flex h-14 items-stretch border-t border-border/60 bg-background/90 backdrop-blur-xl md:hidden"
       >
         {MOBILE_NAV_ITEMS.map((item) => (
           <NavLink
@@ -67,13 +67,24 @@ export default function AppShell() {
             end={item.end}
             className={({ isActive }) =>
               cn(
-                "flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] transition-colors duration-150 ease-out",
+                "flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors duration-150 ease-out",
                 isActive ? "text-accent" : "text-muted-foreground",
               )
             }
           >
-            <item.icon aria-hidden className="size-5" />
-            {item.label}
+            {({ isActive }) => (
+              <>
+                <span
+                  className={cn(
+                    "flex h-6 w-11 items-center justify-center rounded-full transition-colors duration-150 ease-out",
+                    isActive && "bg-accent-soft",
+                  )}
+                >
+                  <item.icon aria-hidden className="size-[18px]" />
+                </span>
+                {item.label}
+              </>
+            )}
           </NavLink>
         ))}
       </nav>

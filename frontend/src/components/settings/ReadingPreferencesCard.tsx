@@ -8,6 +8,7 @@ import {
 } from "@/components/reader/SettingsControls";
 import { Button, Input, SettingCard, SettingRow, Slider, Switch, cn, toast } from "@/components/ui";
 import { useCustomFonts } from "@/hooks/useCustomFonts";
+import { THEME_OPTIONS } from "@/lib/theme";
 import { deleteFont, uploadFont, type CustomFont } from "@/services/fonts";
 import {
   AUTO_SCROLL_SPEED_RANGE,
@@ -15,35 +16,12 @@ import {
   LINE_HEIGHT_RANGE,
   useSettingsStore,
   type FontFamilyMode,
-  type ThemeMode,
 } from "@/stores/settings-store";
 
 /** 段距范围 (em), 与阅读器设置面板同一口径 */
 const PARAGRAPH_GAP_RANGE = { min: 0, max: 2, step: 0.25 } as const;
 /** 页面宽度范围 (em, 仅桌面布局生效), 与阅读器设置面板同一口径 */
 const CONTENT_WIDTH_RANGE = { min: 30, max: 60, step: 1 } as const;
-
-interface ThemeOption {
-  value: ThemeMode;
-  label: string;
-  background: string;
-  /** 选中勾的颜色 (深底色用白勾) */
-  checkColor: string;
-}
-
-/** 主题色板: 与阅读器抽屉同款色值, 含 sepia/system 全五值 */
-const THEME_OPTIONS: ThemeOption[] = [
-  { value: "light", label: "浅色", background: "#ffffff", checkColor: "#3f3f46" },
-  { value: "dark", label: "深色", background: "#17171b", checkColor: "#f4f4f5" },
-  { value: "sepia", label: "羊皮纸", background: "#f6eeda", checkColor: "#433422" },
-  { value: "green", label: "护眼绿", background: "#c7edcc", checkColor: "#22382a" },
-  {
-    value: "system",
-    label: "跟随系统",
-    background: "linear-gradient(135deg, #ffffff 50%, #17171b 50%)",
-    checkColor: "#2563eb",
-  },
-];
 
 /** 字体行说明: 与阅读器浮动面板同一组四选 (宋体/黑体/楷体/自定义) */
 const FONT_HINT: Record<FontFamilyMode, string> = {
@@ -108,7 +86,7 @@ export function ReadingPreferencesCard() {
   return (
     <SettingCard title="阅读偏好" desc="与阅读器内的设置面板同源, 修改即时生效并保存在本机">
       <SettingRow label="主题" value="应用于整个界面与阅读页">
-        <div role="radiogroup" aria-label="主题" className="flex items-center gap-2">
+        <div role="radiogroup" aria-label="主题" className="flex flex-wrap justify-end gap-2">
           {THEME_OPTIONS.map((option) => {
             const selected = theme === option.value;
             return (
@@ -121,13 +99,13 @@ export function ReadingPreferencesCard() {
                 title={option.label}
                 onClick={() => setTheme(option.value)}
                 className={cn(
-                  "relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border transition",
+                  "relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border/70 shadow-xs transition duration-150 ease-out hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
                   selected && "ring-2 ring-accent ring-offset-2 ring-offset-surface",
                 )}
-                style={{ background: option.background }}
+                style={{ background: option.swatch }}
               >
                 {selected ? (
-                  <Check className="size-3.5" style={{ color: option.checkColor }} />
+                  <Check className="size-3.5 drop-shadow-sm" style={{ color: option.checkColor }} />
                 ) : null}
               </button>
             );

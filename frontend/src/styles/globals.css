@@ -3,21 +3,54 @@
 /* class-based dark variant (Tailwind 4) */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ---------- theme tokens (oklch 值移植自砚台原型) ---------- */
-/* 日间: 暖白纸面 + 朱砂红 accent */
+/* ============================================================
+   设计令牌 (design tokens)
+   一套 token 驱动全站: 颜色 / 圆角 / 阴影 / 层级。
+   新增主题只需在下方加一个 [data-theme="…"] 块, 组件不用改。
+   ============================================================ */
+
+/* 日间: 暖白宣纸 + 朱砂红 accent */
 :root {
   --background: oklch(0.986 0.006 95);
   --foreground: oklch(0.26 0.012 60);
   --surface: oklch(0.998 0.004 95);
-  --surface-muted: oklch(0.95 0.01 90);
-  --secondary: oklch(0.95 0.012 90);
+  --surface-muted: oklch(0.955 0.009 90);
+  --surface-elevated: oklch(1 0 0);
+  --secondary: oklch(0.955 0.009 90);
   --border: oklch(0.9 0.012 85);
+  --border-strong: oklch(0.84 0.016 82);
   --accent: oklch(0.44 0.13 22);
+  --accent-hover: oklch(0.39 0.135 22);
   --accent-foreground: oklch(0.98 0.01 90);
-  --muted-foreground: oklch(0.52 0.02 55);
+  --accent-soft: oklch(0.44 0.13 22 / 10%);
+  --muted-foreground: oklch(0.5 0.02 55);
   --danger: oklch(0.577 0.245 27.325);
-  /* 焦点环: 不透明实色, 四套主题各保证 ≥3:1 (半透明 accent 在深色主题下只有 2.4:1) */
+  /* 焦点环: 不透明实色, 各套主题各保证 ≥3:1 (半透明 accent 在深色主题下只有 2.4:1) */
   --ring: oklch(0.42 0.15 22);
+
+  /* 圆角: 小控件 → 卡片 → 大容器 */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  /* 阴影: 极轻 → 浮层, 用前景色染色, 换主题自动跟随冷/暖 */
+  --shadow-xs: 0 1px 2px oklch(0.26 0.012 60 / 6%);
+  --shadow-sm: 0 1px 3px oklch(0.26 0.012 60 / 8%), 0 1px 2px oklch(0.26 0.012 60 / 4%);
+  --shadow-md: 0 4px 12px -2px oklch(0.26 0.012 60 / 10%), 0 2px 6px -2px oklch(0.26 0.012 60 / 6%);
+  --shadow-lg: 0 12px 32px -8px oklch(0.26 0.012 60 / 16%), 0 4px 12px -4px oklch(0.26 0.012 60 / 8%);
+  --shadow-accent: 0 6px 20px -6px oklch(0.44 0.13 22 / 45%);
+
+  /* 表面高光: 卡片顶部 1px 亮线, 让平板不呆 */
+  --surface-sheen: oklch(1 0 0 / 70%);
+
+  /* ---------- reader tokens ---------- */
+  --reader-font-size: 18px;
+  --reader-line-height: 1.8;
+  --reader-paragraph-gap: 0.75em;
+  --reader-content-width: 42em;
 }
 
 .dark {
@@ -25,13 +58,23 @@
   --foreground: oklch(0.9 0.01 85);
   --surface: oklch(0.23 0.01 55);
   --surface-muted: oklch(0.28 0.012 55);
+  --surface-elevated: oklch(0.26 0.011 55);
   --secondary: oklch(0.28 0.012 55);
   --border: oklch(1 0 0 / 12%);
+  --border-strong: oklch(1 0 0 / 20%);
   --accent: oklch(0.62 0.14 25);
+  --accent-hover: oklch(0.67 0.14 25);
   --accent-foreground: oklch(0.98 0.01 90);
+  --accent-soft: oklch(0.62 0.14 25 / 16%);
   --muted-foreground: oklch(0.68 0.015 70);
   --danger: oklch(0.704 0.191 22.216);
   --ring: oklch(0.76 0.13 25);
+  --shadow-xs: 0 1px 2px oklch(0 0 0 / 30%);
+  --shadow-sm: 0 1px 3px oklch(0 0 0 / 35%), 0 1px 2px oklch(0 0 0 / 25%);
+  --shadow-md: 0 4px 14px -2px oklch(0 0 0 / 45%), 0 2px 6px -2px oklch(0 0 0 / 30%);
+  --shadow-lg: 0 16px 40px -10px oklch(0 0 0 / 60%), 0 4px 12px -4px oklch(0 0 0 / 35%);
+  --shadow-accent: 0 6px 22px -6px oklch(0.62 0.14 25 / 50%);
+  --surface-sheen: oklch(1 0 0 / 6%);
 }
 
 /* 羊皮纸 */
@@ -40,17 +83,27 @@
   --foreground: #433422;
   --surface: #efe4cb;
   --surface-muted: #e7d9bc;
+  --surface-elevated: #f2e8d2;
   --border: #dcc7a1;
+  --border-strong: #cbb289;
   --secondary: #e0d0b0;
   --accent: #8a5a2b;
+  --accent-hover: #7a4d23;
   --accent-foreground: #fdf8ee;
+  --accent-soft: rgb(138 90 43 / 12%);
   /* 3.81:1 → 5.54:1: 羊皮纸底上的次要文字原值不达 AA */
   --muted-foreground: #6f5c40;
   --danger: #b3402f;
   --ring: #7a5230;
+  --shadow-xs: 0 1px 2px rgb(67 52 34 / 7%);
+  --shadow-sm: 0 1px 3px rgb(67 52 34 / 10%), 0 1px 2px rgb(67 52 34 / 6%);
+  --shadow-md: 0 4px 12px -2px rgb(67 52 34 / 12%), 0 2px 6px -2px rgb(67 52 34 / 8%);
+  --shadow-lg: 0 12px 32px -8px rgb(67 52 34 / 20%), 0 4px 12px -4px rgb(67 52 34 / 10%);
+  --shadow-accent: 0 6px 20px -6px rgb(138 90 43 / 40%);
+  --surface-sheen: rgb(255 255 255 / 55%);
 }
 
-/* 护眼绿: 淡绿纸面(取自原型 .sepia 护眼块), 仅用于阅读场景之外也全局可用 */
+/* 护眼绿: 淡绿纸面 —— 色值固定, 不做任何调整 */
 [data-theme="green"] {
   --background: oklch(0.95 0.025 145);
   --foreground: oklch(0.29 0.025 145);
@@ -63,14 +116,94 @@
   --muted-foreground: oklch(0.48 0.03 145);
   --danger: oklch(0.55 0.2 27);
   --ring: oklch(0.44 0.11 145);
+  /* 只补全派生令牌的缺省值, 上面既有色值一个不动 */
+  --surface-elevated: oklch(0.985 0.014 145);
+  --border-strong: oklch(0.78 0.05 145);
+  --accent-hover: oklch(0.38 0.1 145);
+  --accent-soft: oklch(0.43 0.1 145 / 12%);
+  --shadow-xs: 0 1px 2px oklch(0.29 0.025 145 / 7%);
+  --shadow-sm: 0 1px 3px oklch(0.29 0.025 145 / 9%), 0 1px 2px oklch(0.29 0.025 145 / 5%);
+  --shadow-md: 0 4px 12px -2px oklch(0.29 0.025 145 / 11%), 0 2px 6px -2px oklch(0.29 0.025 145 / 7%);
+  --shadow-lg: 0 12px 32px -8px oklch(0.29 0.025 145 / 18%), 0 4px 12px -4px oklch(0.29 0.025 145 / 9%);
+  --shadow-accent: 0 6px 20px -6px oklch(0.43 0.1 145 / 38%);
+  --surface-sheen: oklch(1 0 0 / 55%);
 }
 
-/* ---------- reader tokens ---------- */
-:root {
-  --reader-font-size: 18px;
-  --reader-line-height: 1.8;
-  --reader-paragraph-gap: 0.75em;
-  --reader-content-width: 42em;
+/* 青瓷 (Solarized Light): 米青纸面 + 黛蓝 accent
+   取自 Ethan Schoonover 的 Solarized 精确配色, 色差小、长时间阅读最稳 */
+[data-theme="solarized"] {
+  --background: #fdf6e3;
+  --foreground: #4a5b61;
+  --surface: #fffbf0;
+  --surface-muted: #eee8d5;
+  --surface-elevated: #fffdf6;
+  --border: #e2dbc4;
+  --border-strong: #cfc6a8;
+  --secondary: #eee8d5;
+  --accent: #14708c;
+  --accent-hover: #0f5f78;
+  --accent-foreground: #fdf6e3;
+  --accent-soft: rgb(20 112 140 / 10%);
+  --muted-foreground: #56676d;
+  --danger: #c0392f;
+  --ring: #14708c;
+  --shadow-xs: 0 1px 2px rgb(74 91 97 / 6%);
+  --shadow-sm: 0 1px 3px rgb(74 91 97 / 9%), 0 1px 2px rgb(74 91 97 / 5%);
+  --shadow-md: 0 4px 12px -2px rgb(74 91 97 / 11%), 0 2px 6px -2px rgb(74 91 97 / 7%);
+  --shadow-lg: 0 12px 32px -8px rgb(74 91 97 / 18%), 0 4px 12px -4px rgb(74 91 97 / 9%);
+  --shadow-accent: 0 6px 20px -6px rgb(20 112 140 / 38%);
+  --surface-sheen: rgb(255 255 255 / 60%);
+}
+
+/* 雪原 (Nord Snow Storm): 冷蓝灰纸面 + 峡湾蓝 accent
+   Nord 官方 Snow Storm 三阶 (#eceff4 / #e5e9f0 / #d8dee9) 作层次 */
+[data-theme="nord"] {
+  --background: #f1f4f9;
+  --foreground: #2e3440;
+  --surface: #fbfcfe;
+  --surface-muted: #e5e9f0;
+  --surface-elevated: #ffffff;
+  --border: #dbe1ea;
+  --border-strong: #c4cdda;
+  --secondary: #e5e9f0;
+  --accent: #4a6b95;
+  --accent-hover: #3f5c82;
+  --accent-foreground: #f8fafc;
+  --accent-soft: rgb(74 107 149 / 10%);
+  --muted-foreground: #56637a;
+  --danger: #bf616a;
+  --ring: #4a6b95;
+  --shadow-xs: 0 1px 2px rgb(46 52 64 / 6%);
+  --shadow-sm: 0 1px 3px rgb(46 52 64 / 9%), 0 1px 2px rgb(46 52 64 / 5%);
+  --shadow-md: 0 4px 14px -2px rgb(46 52 64 / 11%), 0 2px 6px -2px rgb(46 52 64 / 7%);
+  --shadow-lg: 0 12px 34px -8px rgb(46 52 64 / 18%), 0 4px 12px -4px rgb(46 52 64 / 9%);
+  --shadow-accent: 0 6px 20px -6px rgb(74 107 149 / 38%);
+  --surface-sheen: rgb(255 255 255 / 70%);
+}
+
+/* 夜色 (Tokyo Night): 深靛底 + 霓虹蓝 accent, 夜间高辨识度 */
+[data-theme="tokyo"] {
+  --background: #1a1b26;
+  --foreground: #c8d3f5;
+  --surface: #1f2335;
+  --surface-muted: #292e42;
+  --surface-elevated: #24283b;
+  --border: rgb(122 162 247 / 18%);
+  --border-strong: rgb(122 162 247 / 32%);
+  --secondary: #292e42;
+  --accent: #7aa2f7;
+  --accent-hover: #8fb0f9;
+  --accent-foreground: #16161e;
+  --accent-soft: rgb(122 162 247 / 16%);
+  --muted-foreground: #8b93b8;
+  --danger: #f7768e;
+  --ring: #7aa2f7;
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 35%);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 40%), 0 1px 2px rgb(0 0 0 / 28%);
+  --shadow-md: 0 4px 14px -2px rgb(0 0 0 / 50%), 0 2px 6px -2px rgb(0 0 0 / 32%);
+  --shadow-lg: 0 16px 42px -10px rgb(0 0 0 / 65%), 0 4px 12px -4px rgb(0 0 0 / 38%);
+  --shadow-accent: 0 6px 24px -6px rgb(122 162 247 / 45%);
+  --surface-sheen: rgb(200 211 245 / 8%);
 }
 
 /* ---------- tailwind theme mapping ---------- */
@@ -79,13 +212,18 @@
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
+  --color-surface-elevated: var(--surface-elevated);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
   --color-accent-foreground: var(--accent-foreground);
   --color-muted-foreground: var(--muted-foreground);
   --color-danger: var(--danger);
   --color-secondary: var(--secondary);
   --color-ring: var(--ring);
+  --radius-card: var(--radius-lg);
   --font-display: "Noto Serif SC", Georgia, "Times New Roman", "Songti SC", SimSun, "Noto Serif CJK SC", serif;
 }
 
@@ -118,7 +256,79 @@
     /* 兜底: 任何被写死的超宽元素都不得把文档撑出横向滚动条(iOS 会被拖动, 表现为左右被裁) */
     overflow-x: clip;
     text-rendering: optimizeLegibility;
+    font-feature-settings: "kern" 1;
   }
+
+  /* 选中文本: 主题淡染, 深色下不刺眼 */
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 26%, transparent);
+    color: var(--foreground);
+  }
+
+  /* 中文大标题: 轻收字距, 字号大时不散 */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.01em;
+  }
+}
+
+/* ---------- 通用表面 / 交互增强 ---------- */
+
+/* 卡片: 平板 → 有纸面感(顶部 1px 高光 + 极轻阴影), 悬停时边界变实 */
+.surface-card {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color 180ms ease-out,
+    box-shadow 180ms ease-out,
+    transform 180ms ease-out;
+}
+.surface-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--surface-sheen) 22%, var(--surface-sheen) 78%, transparent);
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .surface-card:hover {
+    border-color: color-mix(in oklab, var(--accent) 26%, var(--border));
+    box-shadow: var(--shadow-md);
+  }
+}
+
+/* 浮层面板: 弹窗 / 抽屉 / 下拉 */
+.surface-float {
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-lg);
+}
+
+/* 主色渐变: 主按钮与品牌块共用, 换主题自动跟随 */
+.accent-gradient {
+  background-image: linear-gradient(
+    140deg,
+    color-mix(in oklab, var(--accent) 86%, white 14%),
+    var(--accent) 52%,
+    color-mix(in oklab, var(--accent) 88%, black 12%)
+  );
+}
+
+/* 细网格纹理: 用于空态 / 登录页背景, 主题自适应; 四周用径向遮罩淡出, 避免边缘成条纹 */
+.paper-grid {
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.3;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, #000 25%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, #000 25%, transparent 78%);
 }
 
 /* 滚动条: 细圆墨色随主题 (分类横条/模态竖条/正文区统一), 轨道透明不抢版面 */
@@ -217,5 +427,17 @@
   textarea,
   select {
     font-size: 16px;
+  }
+}
+
+/* 尊重系统「减少动效」: 所有过渡/动画降到 0.01ms */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

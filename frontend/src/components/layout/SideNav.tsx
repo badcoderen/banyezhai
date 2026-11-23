@@ -30,7 +30,7 @@ export interface SideNavContentProps {
 }
 
 const itemClass =
-  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring";
+  "relative flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left text-sm outline-none transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring";
 /** 折叠态: 40×40 方块, 只放图标; 四周留白让 64px 图标栏不至于贴边 */
 const collapsedItemClass = "mx-auto size-10 justify-center px-0 py-0";
 
@@ -55,10 +55,17 @@ function SideNavItem({
         itemClass,
         collapsed && collapsedItemClass,
         isActive
-          ? "bg-accent/10 font-medium text-accent"
+          ? "bg-accent-soft font-medium text-accent"
           : "text-muted-foreground hover:bg-surface-muted hover:text-foreground",
       )}
     >
+      {/* 激活指示条: 只在大图标 + 文字的展开态出现, 折叠图标栏下会与图标抢位置 */}
+      {isActive && !collapsed ? (
+        <span
+          aria-hidden
+          className="absolute top-1/2 left-0 h-5 w-[3px] -translate-y-1/2 rounded-full bg-accent"
+        />
+      ) : null}
       <item.icon className={cn("shrink-0", collapsed ? "size-[18px]" : "size-4")} aria-hidden />
       {collapsed ? null : <span className="truncate">{item.label}</span>}
     </NavLink>
@@ -79,11 +86,12 @@ function NavSectionLabel({ collapsed, children }: { collapsed: boolean; children
   return (
     <p
       className={cn(
-        "mt-1 mb-2 px-3 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground",
+        "mt-2 mb-1.5 flex items-center gap-2 px-3 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground/80",
         collapsed && "sr-only",
       )}
     >
       {children}
+      <span aria-hidden className="h-px flex-1 bg-border/70" />
     </p>
   );
 }
@@ -100,13 +108,15 @@ export function SideNavContent({ collapsed, onNavigate, onToggleCollapse }: Side
           collapsed ? "justify-center" : "px-4",
         )}
       >
-        <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+        <span className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-md)] ring-1 ring-border/80 shadow-[var(--shadow-xs)]">
           <img src={BRAND_LOGO} alt="半页斋" className="size-9 object-cover" />
         </span>
         {collapsed ? null : (
           <div className="min-w-0">
-            <p className="font-display text-lg leading-none font-semibold">半页斋</p>
-            <p className="mt-1 text-[10px] tracking-[0.2em] text-muted-foreground">BY BADCODE</p>
+            <p className="font-display text-lg leading-none font-semibold tracking-tight">半页斋</p>
+            <p className="mt-1.5 text-[9px] tracking-[0.28em] text-muted-foreground/80 uppercase">
+              BY BADCODE
+            </p>
           </div>
         )}
       </div>
@@ -132,17 +142,20 @@ export function SideNavContent({ collapsed, onNavigate, onToggleCollapse }: Side
         ) : null}
       </nav>
       {onToggleCollapse ? (
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          aria-label={collapsed ? "展开侧边栏" : "收起侧边栏"}
-          className={cn(
-            "mx-3 mb-3 flex cursor-pointer items-center justify-center rounded-lg border border-border text-muted-foreground outline-none transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-            collapsed ? "h-10" : "py-2",
-          )}
-        >
-          <PanelLeft className={cn(collapsed ? "size-[18px]" : "size-4")} aria-hidden />
-        </button>
+        <div className="mt-auto p-3">
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-label={collapsed ? "展开侧边栏" : "收起侧边栏"}
+            className={cn(
+              "flex w-full cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-md)] border border-border/50 text-muted-foreground outline-none transition-colors duration-150 ease-out hover:border-border-strong hover:bg-surface-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+              collapsed ? "h-10" : "h-9 text-xs",
+            )}
+          >
+            <PanelLeft className={cn(collapsed ? "size-[18px]" : "size-3.5")} aria-hidden />
+            {collapsed ? null : <span>收起侧栏</span>}
+          </button>
+        </div>
       ) : null}
     </div>
   );
@@ -154,7 +167,7 @@ export function SideNav({ collapsed, onToggleCollapse }: SideNavProps) {
     <aside
       aria-label="主导航"
       className={cn(
-        "ui-safe-x hidden shrink-0 border-r border-border/70 bg-surface/40 transition-[width] md:flex md:flex-col",
+        "ui-safe-x hidden shrink-0 border-r border-border/70 bg-surface/40 backdrop-blur-sm transition-[width] duration-200 ease-out md:flex md:flex-col",
         collapsed ? "w-16" : "w-56",
       )}
     >

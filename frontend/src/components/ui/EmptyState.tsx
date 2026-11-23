@@ -37,18 +37,18 @@ export function EmptyState({
       {icon ? (
         <div
           className={cn(
-            "flex shrink-0 items-center justify-center rounded-2xl bg-surface-muted text-muted-foreground",
-            compact ? "size-10 [&_svg]:size-5" : "size-12 [&_svg]:size-6",
+            "flex shrink-0 items-center justify-center rounded-[var(--radius-xl)] border border-accent/15 bg-accent-soft text-accent shadow-[var(--shadow-xs)]",
+            compact ? "size-11 [&_svg]:size-5" : "size-14 [&_svg]:size-7",
           )}
         >
           {icon}
         </div>
       ) : null}
-      <p className={cn("font-medium text-foreground", compact ? "text-sm" : "text-base")}>
+      <p className={cn("font-display font-semibold text-foreground", compact ? "text-sm" : "text-lg")}>
         {title}
       </p>
       {description ? (
-        <p className="max-w-80 text-sm leading-6 text-muted-foreground">{description}</p>
+        <p className="max-w-80 text-sm leading-6 text-muted-foreground text-pretty">{description}</p>
       ) : null}
       {action ? (
         <div className="mt-1 flex flex-wrap items-center justify-center gap-2">{action}</div>

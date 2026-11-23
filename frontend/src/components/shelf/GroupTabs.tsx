@@ -54,10 +54,13 @@ export function GroupTabs({
               key={group.groupId}
               value={String(group.groupId)}
               aria-controls={controlsId}
-              className="min-h-10 rounded-full border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground data-[state=active]:border-accent data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
+              className="min-h-10 shrink-0 rounded-full border border-border bg-surface/60 px-3.5 py-2 text-sm font-medium text-muted-foreground shadow-[var(--shadow-xs)] transition-[background-color,border-color,color,box-shadow] duration-150 ease-out hover:border-accent/40 hover:text-foreground data-[state=active]:border-transparent data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-[var(--shadow-accent)]"
             >
               {group.groupName}
-              <span aria-hidden className="text-xs tabular-nums opacity-70">
+              <span
+                aria-hidden
+                className="ml-1 rounded-full bg-foreground/10 px-1.5 text-[10px] tabular-nums"
+              >
                 {count}
               </span>
             </TabsTrigger>
@@ -67,10 +70,11 @@ export function GroupTabs({
       <button
         type="button"
         onClick={() => setManageOpen(true)}
-        className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-accent hover:text-accent"
+        aria-label="管理分组"
+        className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-border px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:border-accent hover:text-accent sm:px-3"
       >
         <FolderCog aria-hidden className="size-4" />
-        管理分组
+        <span className="hidden sm:inline">管理分组</span>
       </button>
       <GroupManageDialog open={manageOpen} onOpenChange={setManageOpen} groups={groups} />
     </div>

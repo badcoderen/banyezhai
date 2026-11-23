@@ -329,11 +329,14 @@ const ParagraphItem = React.memo(function ParagraphItem({
     case "title":
       return (
         <header data-pos={0} className="break-inside-avoid px-5 pt-10 pb-8 break-after-avoid">
-          <p className="text-xs text-muted-foreground">
-            {bookName} · {bookAuthor}
+          <p className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span aria-hidden className="h-px w-6 bg-accent/50" />
+            <span className="truncate">
+              {bookName} · {bookAuthor}
+            </span>
           </p>
           <h2
-            className="mt-2 font-display font-semibold text-balance"
+            className="mt-3 font-display font-semibold text-balance tracking-[-0.01em]"
             style={{ fontSize: "calc(var(--reader-font-size) * 1.35)" }}
           >
             {item.text}
@@ -344,10 +347,12 @@ const ParagraphItem = React.memo(function ParagraphItem({
       return (
         <h2
           data-pos={0}
-          className="break-inside-avoid px-5 pt-16 pb-3 text-center font-display font-semibold"
+          className="flex break-inside-avoid items-center justify-center gap-3 px-5 pt-16 pb-3 text-center font-display font-semibold"
           style={{ fontSize: "calc(var(--reader-font-size) * 1.3)" }}
         >
-          {item.text}
+          <span aria-hidden className="hidden h-px w-8 shrink-0 bg-border sm:block" />
+          <span className="min-w-0 text-balance">{item.text}</span>
+          <span aria-hidden className="hidden h-px w-8 shrink-0 bg-border sm:block" />
         </h2>
       );
     case "volumeTag":

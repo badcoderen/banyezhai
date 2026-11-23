@@ -74,8 +74,11 @@ export function BookCard({
       : 0;
   const progressBar =
     totalChapterNum > 0 ? (
-      <div aria-hidden className="h-0.5 overflow-hidden rounded-full bg-border/60">
-        <div className="h-full bg-accent/70" style={{ width: `${progressPct}%` }} />
+      <div aria-hidden className="h-[3px] overflow-hidden rounded-full bg-border/60">
+        <div
+          className="accent-gradient h-full rounded-full transition-[width] duration-300 ease-out"
+          style={{ width: `${progressPct}%` }}
+        />
       </div>
     ) : null;
   const canMarkRead = totalChapterNum > 0 && unread > 0;
@@ -185,7 +188,7 @@ export function BookCard({
     return (
       <div
         className={cn(
-          "group relative flex touch-manipulation select-none items-center gap-3 rounded-xl border border-border bg-surface p-3 transition-colors duration-150 ease-out hover:border-accent/50 sm:gap-4",
+          "surface-card group relative flex touch-manipulation select-none items-center gap-3 p-3 sm:gap-4",
           selectedRing,
           className,
         )}
@@ -199,7 +202,7 @@ export function BookCard({
             alt={book.name}
             author={book.author}
             intro={intro}
-            className="p-2 shadow-sm ring-1 ring-border/70"
+            className="p-2 shadow-[var(--shadow-sm)] ring-1 ring-border/70"
           />
         </div>
 
@@ -244,7 +247,7 @@ export function BookCard({
           alt={book.name}
           author={book.author}
           intro={intro}
-          className="transition duration-150 ease-out group-hover:-translate-y-0.5 group-hover:shadow-xl"
+          className="transition duration-200 ease-out group-hover:-translate-y-1 group-hover:shadow-[var(--shadow-lg)]"
         />
 
         {checkbox}
@@ -253,7 +256,7 @@ export function BookCard({
 
       <p
         title={book.name}
-        className="mt-2 min-w-0 truncate px-0.5 text-center text-sm font-medium"
+        className="font-display mt-2.5 min-w-0 truncate px-0.5 text-center text-[13.5px] leading-snug font-semibold tracking-[-0.01em]"
       >
         {book.name}
       </p>
@@ -261,7 +264,7 @@ export function BookCard({
       {book.author.trim().length > 0 ? (
         <p
           title={book.author}
-          className="mt-0.5 min-w-0 truncate px-0.5 text-center text-xs text-muted-foreground"
+          className="mt-1 min-w-0 truncate px-0.5 text-center text-[11px] text-muted-foreground"
         >
           {book.author.trim()}
         </p>
@@ -270,7 +273,7 @@ export function BookCard({
       {progressText.length > 0 ? (
         <p
           title={progressText}
-          className="mt-0.5 min-w-0 truncate px-0.5 text-center text-xs text-muted-foreground"
+          className="mt-1 min-w-0 truncate px-0.5 text-center text-[11px] text-muted-foreground"
         >
           {progressText}
         </p>

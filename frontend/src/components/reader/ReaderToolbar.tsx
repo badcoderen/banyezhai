@@ -110,7 +110,7 @@ export function ReaderTopBar({
       aria-hidden={chromeHidden}
       inert={chromeHidden}
       className={cn(
-        "ui-safe-t ui-safe-x sticky top-0 z-30 shrink-0 overflow-hidden border-b border-border/70 bg-background/85 backdrop-blur",
+        "ui-safe-t ui-safe-x sticky top-0 z-30 shrink-0 overflow-hidden border-b border-border/60 bg-background/80 backdrop-blur-xl",
         // 点正文收起/展开: 高度与位移同时过渡, 内容区随之占满全屏(遵守系统减动效偏好)
         "transition-[height,transform,opacity] duration-300 ease-out motion-reduce:transition-none",
         chromeHidden ? "h-0 -translate-y-full border-transparent opacity-0" : "h-14",
@@ -222,11 +222,11 @@ export function ReaderTopBar({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percent}
-        className="h-0.5"
+        className="h-[3px] bg-border/40"
       >
         {/* scaleX 而非 width: 每帧改 width 会触发布局, 滚动时这一条占满整个阅读期 */}
         <div
-          className="h-full w-full origin-left bg-accent transition-transform duration-150 ease-out motion-reduce:transition-none"
+          className="accent-gradient h-full w-full origin-left transition-transform duration-150 ease-out motion-reduce:transition-none"
           style={{ transform: `scaleX(${percent / 100})` }}
         />
       </div>

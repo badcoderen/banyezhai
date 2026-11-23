@@ -111,7 +111,7 @@ export function DrawerContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          "ui-safe-b ui-safe-x fixed z-50 flex flex-col overflow-hidden bg-surface text-foreground shadow-2xl outline-none",
+          "ui-safe-b ui-safe-x fixed z-50 flex flex-col overflow-hidden bg-surface-elevated text-foreground shadow-[var(--shadow-lg)] outline-none",
           panelClass(side, sheetOnMobile),
           className,
         )}

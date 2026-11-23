@@ -103,6 +103,10 @@ export function detectGraphTheme(): GraphTheme {
   }
   const dark = root.classList.contains("dark");
   const themeName = root.dataset.theme ?? "";
+  // 夜色是深色系 data-theme, 必须先于 .dark 兜底分支判定, 否则会落到墨黑的暖褐配色
+  if (themeName === "tokyo") {
+    return { dark: true, canvasBg: "#1a1b26", labelColor: "#c8d3f5", labelOutline: "#1a1b26", accent: "#7aa2f7" };
+  }
   if (dark) {
     return {
       dark: true,
@@ -114,6 +118,12 @@ export function detectGraphTheme(): GraphTheme {
   }
   if (themeName === "sepia") {
     return { dark: false, canvasBg: "#f6eeda", labelColor: "#433422", labelOutline: "#f6eeda", accent: "#8a5a2b" };
+  }
+  if (themeName === "solarized") {
+    return { dark: false, canvasBg: "#fdf6e3", labelColor: "#4a5b61", labelOutline: "#fdf6e3", accent: "#14708c" };
+  }
+  if (themeName === "nord") {
+    return { dark: false, canvasBg: "#f1f4f9", labelColor: "#2e3440", labelOutline: "#f1f4f9", accent: "#4a6b95" };
   }
   if (themeName === "green") {
     return { dark: false, canvasBg: "#ecf5ee", labelColor: "#3c4b3f", labelOutline: "#ecf5ee", accent: "#3f7a55" };

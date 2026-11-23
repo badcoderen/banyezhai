@@ -14,15 +14,15 @@ export interface BadgeProps extends React.ComponentProps<"span"> {
 
 const variantClass: Record<BadgeVariant, string> = {
   default: "border border-border bg-surface-muted text-foreground",
-  accent: "border border-accent/30 bg-accent/15 text-accent",
+  accent: "border border-accent/25 bg-accent-soft text-accent",
   muted: "bg-surface-muted text-muted-foreground",
   danger: "border border-danger/30 bg-danger/15 text-danger",
-  outline: "border border-border text-muted-foreground",
+  outline: "border border-border bg-transparent text-muted-foreground",
 };
 
 const sizeClass: Record<BadgeSize, string> = {
-  sm: "h-4.5 gap-1 rounded-md px-1.5 text-xs",
-  md: "h-5.5 gap-1 rounded-lg px-2 text-xs",
+  sm: "h-4.5 gap-1 rounded-[5px] px-1.5 text-xs",
+  md: "h-5.5 gap-1 rounded-[var(--radius-xs)] px-2 text-xs",
 };
 
 /** 状态标签: 用于书源启用/失效、书籍类型、分组名等短文本标记. */

@@ -63,17 +63,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-background px-4 py-10">
-      <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center gap-2">
-          <span className="flex size-12 items-center justify-center overflow-hidden rounded-2xl shadow-sm">
-            <img src={BRAND_LOGO} alt="半页斋" className="size-12 object-cover" />
+    <div className="relative flex min-h-full items-center justify-center overflow-hidden bg-background px-4 py-10">
+      {/* 背景: 极淡纸纹网格 + 顶部一抹主题色柔光, 不抢表单 */}
+      <div aria-hidden className="paper-grid pointer-events-none absolute inset-0" />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-44 left-1/2 h-80 w-[34rem] -translate-x-1/2 rounded-full bg-accent/10 blur-3xl"
+      />
+      <div className="relative w-full max-w-sm">
+        <div className="mb-7 flex flex-col items-center gap-2.5">
+          <span className="flex size-14 items-center justify-center overflow-hidden rounded-[var(--radius-xl)] ring-1 ring-border/80 shadow-[var(--shadow-md)]">
+            <img src={BRAND_LOGO} alt="半页斋" className="size-14 object-cover" />
           </span>
-          <h1 className="text-2xl font-semibold tracking-tight">半页斋</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">半页斋</h1>
           <p className="text-sm text-muted-foreground">登录后同步书架与阅读进度</p>
         </div>
 
-        <div className="rounded-2xl border bg-surface p-6 shadow-sm">
+        <div className="surface-card p-6">
           <Tabs
             value={tab}
             onValueChange={(value) => {

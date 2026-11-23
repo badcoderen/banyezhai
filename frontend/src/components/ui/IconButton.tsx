@@ -16,9 +16,9 @@ export interface IconButtonProps extends Omit<ButtonProps, "size"> {
 }
 
 const sizeClass: Record<IconButtonSize, string> = {
-  sm: "size-8 [&_svg]:size-3.5",
-  md: "size-9",
-  lg: "size-10 rounded-xl [&_svg]:size-5",
+  sm: "size-8 rounded-[var(--radius-sm)] [&_svg]:size-3.5",
+  md: "size-9 rounded-[var(--radius-md)]",
+  lg: "size-10 rounded-[var(--radius-lg)] [&_svg]:size-5",
 };
 
 /** 正方形图标按钮: children 放图标, 无障碍名称取 aria-label(缺失时用文本 tooltip 兜底). */

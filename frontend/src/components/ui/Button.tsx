@@ -19,19 +19,23 @@ export interface ButtonProps extends React.ComponentProps<"button"> {
 }
 
 const baseClass =
-  "inline-flex shrink-0 cursor-pointer select-none items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap outline-none transition duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-97 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0";
+  "inline-flex shrink-0 cursor-pointer select-none items-center justify-center gap-2 rounded-[var(--radius-md)] font-medium whitespace-nowrap outline-none transition-[background-color,border-color,box-shadow,transform,color,filter] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.975] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0";
 
 const variantClass: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-accent-foreground shadow-sm hover:bg-accent/90",
-  secondary: "border border-border bg-surface text-foreground hover:bg-surface-muted",
-  ghost: "text-foreground hover:bg-surface-muted",
-  danger: "bg-danger text-background shadow-sm hover:bg-danger/95",
+  // 主操作: 主题色渐变 + 极轻投影, 悬停浮起一档(换主题自动跟随 accent)
+  primary:
+    "accent-gradient text-accent-foreground shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-accent)] hover:brightness-[1.05]",
+  secondary:
+    "border border-border bg-surface text-foreground shadow-[var(--shadow-xs)] hover:border-border-strong hover:bg-surface-muted",
+  ghost: "text-foreground/85 hover:bg-surface-muted hover:text-foreground",
+  danger:
+    "bg-danger text-white shadow-[var(--shadow-sm)] hover:brightness-105 hover:shadow-[var(--shadow-md)]",
 };
 
 const sizeClass: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-xs",
+  sm: "h-8 rounded-[var(--radius-sm)] px-3 text-xs",
   md: "h-9 px-4 text-sm",
-  lg: "h-11 rounded-xl px-6 text-base",
+  lg: "h-11 rounded-[var(--radius-lg)] px-6 text-[15px]",
   icon: "size-9",
 };
 

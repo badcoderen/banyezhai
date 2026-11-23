@@ -12,12 +12,15 @@ export interface SettingCardProps {
   className?: string;
 }
 
-/** 设置卡(移植自砚台原型): 衬线标题 + 描述 + divide-y 行内容. */
+/** 设置卡: 衬线标题 + 描述 + divide-y 行内容, 纸面质感由 surface-card 统一提供. */
 export function SettingCard({ title, desc, children, className }: SettingCardProps) {
   return (
-    <section className={cn("rounded-xl border border-border bg-surface p-5", className)}>
-      <h2 className="font-display text-lg font-semibold">{title}</h2>
-      {desc ? <p className="mt-1 text-xs text-muted-foreground">{desc}</p> : null}
+    <section className={cn("surface-card p-5 sm:p-6", className)}>
+      <div className="flex items-baseline gap-2">
+        <h2 className="font-display text-lg leading-tight font-semibold">{title}</h2>
+        <span aria-hidden className="h-px flex-1 bg-border/60" />
+      </div>
+      {desc ? <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{desc}</p> : null}
       <div className="mt-5 divide-y divide-border/70">{children}</div>
     </section>
   );

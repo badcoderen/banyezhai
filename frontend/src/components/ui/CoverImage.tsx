@@ -114,11 +114,26 @@ export function CoverImage({ src, alt, author, intro, className, ...props }: Cov
         }}
         onError={() => setFailedSrc(src ?? null)}
         className={cn(
-          "absolute inset-0 size-full object-cover transition-opacity duration-200 ease-out",
+          "absolute inset-0 size-full object-cover transition-[opacity,transform] duration-300 ease-out",
           loaded ? "opacity-100" : "opacity-0",
         )}
       />
-      {loaded ? null : <div aria-hidden className="absolute inset-0 animate-pulse bg-surface-muted" />}
+      {loaded ? (
+        <>
+          {/* 书脊压暗带: 封面贴左边缘, 让平面图有装订厚度 */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 left-0 w-2.5 bg-gradient-to-r from-black/25 via-black/8 to-transparent"
+          />
+          {/* 斜向柔光: 悬停时掠过封面, 只在有 hover 的设备上生效 */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-black/10 via-transparent to-white/20 opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100"
+          />
+        </>
+      ) : (
+        <div aria-hidden className="absolute inset-0 animate-pulse bg-surface-muted" />
+      )}
     </div>
   );
 }
