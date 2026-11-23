@@ -36,6 +36,10 @@ RUN cargo chef cook --release --recipe-path /app/recipe.json
 
 FROM cook AS builder
 WORKDIR /app
+# 真实 Cargo.toml/lock: cargo-chef 的 recipe 把包版本占位成 0.0.1, 不拷回来的话
+# 二进制里的 CARGO_PKG_VERSION(getSystemInfo 的 version 字段) 永远是 0.0.1。
+# 放在 src 之前, 只改源码时这层仍走缓存。
+COPY backend/Cargo.toml backend/Cargo.lock ./
 COPY backend/src ./src
 COPY backend/.cargo ./.cargo
 # GAP 176：epub 导出内嵌中文字体（include_bytes 编译期内嵌, 路径相对 cargo 根）

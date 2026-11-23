@@ -99,6 +99,8 @@ export default function SourceHealthPage() {
   const [group, setGroup] = React.useState<string>(SOURCE_GROUP_ALL);
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
   const [keyword, setKeyword] = React.useState<string>(PROBE_KEYWORDS[0]!);
+  /** 上一轮实际使用的关键词: 轮换后 keyword 已指向下一次, 行内文案必须用这个 */
+  const [runKeyword, setRunKeyword] = React.useState<string>("");
   const [lastRunAt, setLastRunAt] = React.useState<number>(0);
   const cancelRef = React.useRef(false);
 
@@ -119,6 +121,7 @@ export default function SourceHealthPage() {
     if (!saved || !saved.results) return;
     setProbes(saved.results);
     setKeyword(saved.keyword || PROBE_KEYWORDS[0]!);
+    setRunKeyword(saved.keyword || "");
     setLastRunAt(saved.at || 0);
   }, []);
 
@@ -143,9 +146,11 @@ export default function SourceHealthPage() {
 
   const visibleSources = React.useMemo(() => {
     if (statusFilter === "all") return scopedSources;
-    return scopedSources.filter(
-      (s) => (probes[s.bookSourceUrl]?.status ?? "idle") === statusFilter,
-    );
+    return scopedSources.filter((s) => {
+      const status = probes[s.bookSourceUrl]?.status ?? "idle";
+      // 「未检测」卡片把检测中也算进去了, 筛选必须一致, 否则数字和列表对不上
+      return statusFilter === "idle" ? status === "idle" || status === "running" : status === statusFilter;
+    });
   }, [scopedSources, statusFilter, probes]);
 
   function saveRun(next: Record<string, ProbeState>, kw: string) {
@@ -159,6 +164,7 @@ export default function SourceHealthPage() {
     const kw = keyword;
     cancelRef.current = false;
     setRunning(true);
+    setRunKeyword(kw);
     setCheckedCount(0);
     setProbeTotal(list.length);
     setSelected(new Set());
@@ -238,13 +244,16 @@ export default function SourceHealthPage() {
 
   async function handleDelete() {
     const urls = [...selected];
-    await deleteMutation.mutateAsync(urls);
-    setProbes((prev) => {
-      const next = { ...prev };
-      for (const u of urls) delete next[u];
-      saveRun(next, keyword);
-      return next;
-    });
+    try {
+      await deleteMutation.mutateAsync(urls);
+    } catch {
+      // 失败提示由 mutation 的 onError 统一 toast, 这里保持弹窗打开供重试
+      return;
+    }
+    const next = { ...probes };
+    for (const u of urls) delete next[u];
+    setProbes(next);
+    saveRun(next, runKeyword || keyword);
     setSelected(new Set());
     setConfirmOpen(false);
   }
@@ -286,7 +295,7 @@ export default function SourceHealthPage() {
           刷新书源
         </Button>
         <span className="text-sm text-muted-foreground">
-          关键词 <span className="font-medium text-foreground">「{keyword}」</span>
+          本轮关键词 <span className="font-medium text-foreground">「{keyword}」</span>
           {lastRunAt > 0 ? ` · 上次体检 ${formatAgo(lastRunAt)}` : null}
         </span>
       </div>
@@ -421,7 +430,7 @@ export default function SourceHealthPage() {
               key={src.bookSourceUrl}
               source={src}
               probe={probes[src.bookSourceUrl]}
-              keyword={keyword}
+              keyword={runKeyword}
               checked={selected.has(src.bookSourceUrl)}
               onToggle={() => toggleSelect(src.bookSourceUrl)}
             />
@@ -546,7 +555,9 @@ function SourceHealthRow({
             <span className="ml-2 text-danger/90">· {probe.reason}</span>
           ) : null}
           {status === "empty" ? (
-            <span className="ml-2 text-warn">搜「{keyword}」0 条 · 源可能只收录特定书</span>
+            <span className="ml-2 text-warn">
+              {keyword ? `搜「${keyword}」0 条` : "0 条结果"} · 源可能只收录特定书
+            </span>
           ) : null}
         </p>
       </div>

@@ -227,6 +227,7 @@ function CacheDetailDialog({ book, onClose }: { book: Book | null; onClose: () =
   const [candidates, setCandidates] = React.useState<AvailableBookSource[] | null>(null);
   const [migrating, setMigrating] = React.useState<string | null>(null);
   const [migrateNote, setMigrateNote] = React.useState<string>("");
+  const [migrateFailed, setMigrateFailed] = React.useState(false);
 
   React.useEffect(() => {
     if (!book) return;
@@ -234,6 +235,7 @@ function CacheDetailDialog({ book, onClose }: { book: Book | null; onClose: () =
     setRows(null);
     setLoading(true);
     setMigrateNote("");
+    setMigrateFailed(false);
     listChapterCache(book.bookUrl)
       .then((r) => {
         if (!alive) return;
@@ -252,6 +254,8 @@ function CacheDetailDialog({ book, onClose }: { book: Book | null; onClose: () =
 
   if (!book) return null;
   const b = book;
+  /** 可选换源目标: 排除当前这本自己 */
+  const switchable = candidates ? candidates.filter((c) => c.bookUrl !== b.bookUrl) : [];
 
   const totalSize = rows ? rows.reduce((acc, r) => acc + r.length, 0) : 0;
   const emptyCount = rows ? rows.filter((r) => r.length === 0).length : 0;
@@ -269,6 +273,7 @@ function CacheDetailDialog({ book, onClose }: { book: Book | null; onClose: () =
     if (!candidates) return;
     setMigrating(candidate.bookUrl);
     setMigrateNote("");
+    setMigrateFailed(false);
     try {
       const result = await migrateChapterCache(b.bookUrl, candidate.bookUrl);
       setMigrateNote(
@@ -285,6 +290,7 @@ function CacheDetailDialog({ book, onClose }: { book: Book | null; onClose: () =
       });
       onClose();
     } catch (err) {
+      setMigrateFailed(true);
       setMigrateNote(
         err instanceof Error ? `失败：${err.message}` : "换源失败，缓存未动",
       );
@@ -338,40 +344,42 @@ function CacheDetailDialog({ book, onClose }: { book: Book | null; onClose: () =
           <div className="rounded-lg border border-border/60 p-4">
             <p className="mb-2 text-sm font-medium">换源（保留缓存）</p>
             {migrateNote && (
-              <p className="mb-2 text-xs text-success">{migrateNote}</p>
+              <p className={cn("mb-2 text-xs", migrateFailed ? "text-danger" : "text-success")}>
+                {migrateNote}
+              </p>
             )}
             {candidates === null ? (
               <Button
                 size="sm"
                 variant="secondary"
                 onClick={() =>
-                  void getAvailableBookSource(book.bookUrl).then(setCandidates)
+                  void getAvailableBookSource(b.bookUrl)
+                    .then(setCandidates)
+                    .catch(() => setCandidates([]))
                 }
               >
                 <ArrowLeftRight className="size-4" />
                 查看可换的源
               </Button>
-            ) : candidates.length === 0 ? (
+            ) : switchable.length === 0 ? (
               <p className="text-xs text-muted-foreground">暂无可换的源</p>
             ) : (
               <ul className="flex flex-col gap-2">
-                {candidates
-                  .filter((c) => c.bookUrl !== book.bookUrl)
-                  .map((c) => (
-                    <li key={c.bookUrl} className="flex items-center gap-2">
-                      <span className="min-w-0 flex-1 truncate text-sm">
-                        {c.originName || c.origin}
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        loading={migrating === c.bookUrl}
-                        onClick={() => void handleSwitch(c)}
-                      >
-                        {migrating === c.bookUrl ? "搬缓存中" : "先搬缓存再换"}
-                      </Button>
-                    </li>
-                  ))}
+                {switchable.map((c) => (
+                  <li key={c.bookUrl} className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-sm">
+                      {c.originName || c.origin}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={migrating === c.bookUrl}
+                      onClick={() => void handleSwitch(c)}
+                    >
+                      {migrating === c.bookUrl ? "搬缓存中" : "先搬缓存再换"}
+                    </Button>
+                  </li>
+                ))}
               </ul>
             )}
           </div>

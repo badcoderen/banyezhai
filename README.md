@@ -2,7 +2,7 @@
 
 # 半页斋 · Banyezhai
 
-**v1.0.0** · 自托管在线阅读服务 —— 多源搜索 · 书架 · 阅读器 · 换源 · 多级缓存 · TTS 朗读
+**v1.1.0** · 自托管在线阅读服务 —— 多源搜索 · 书架 · 阅读器 · 换源 · 多级缓存 · TTS 朗读
 
 Rust(axum) + React · 单容器 · SQLite 单文件 · 数据全部留在自己机器上
 
@@ -12,7 +12,7 @@ Rust(axum) + React · 单容器 · SQLite 单文件 · 数据全部留在自己�
 
 > ## 关于本仓库
 >
-> 这是 [hehecat/reader](https://github.com/hehecat/reader) 的二次开发版本，版本号 **v1.0.0**，依 GPL-3.0 协议开源。
+> 这是 [hehecat/reader](https://github.com/hehecat/reader) 的二次开发版本，版本号 **v1.1.0**，依 GPL-3.0 协议开源。
 >
 > **在上游基础上的改动：**
 >

@@ -2074,7 +2074,11 @@ async fn migrate_chapter_cache(
             "found": 0, "moved": 0, "targetTotal": 0, "note": "同一地址，无需搬运",
         })));
     }
-    match state.storage.migrate_chapter_cache(&namespace, &from, &to).await {
+    match state
+        .storage
+        .migrate_chapter_cache(&namespace, &from, &to)
+        .await
+    {
         Ok((found, moved, total)) => Json(ReturnData::ok(serde_json::json!({
             "found": found, "moved": moved, "targetTotal": total,
         }))),
@@ -2108,7 +2112,9 @@ async fn list_chapter_cache(
                     serde_json::json!({ "chapterIndex": idx, "title": title, "length": len })
                 })
                 .collect();
-            Json(ReturnData::ok(serde_json::json!({ "url": url, "total": list.len(), "rows": list })))
+            Json(ReturnData::ok(
+                serde_json::json!({ "url": url, "total": list.len(), "rows": list }),
+            ))
         }
         Err(e) => {
             tracing::error!("listChapterCache 失败: {e}");
@@ -2141,7 +2147,11 @@ async fn get_swap_alias(
                 } else {
                     alias.to_string()
                 };
-                if let Err(e) = state.storage.set_swap_alias(&namespace, &url, &alias_str).await {
+                if let Err(e) = state
+                    .storage
+                    .set_swap_alias(&namespace, &url, &alias_str)
+                    .await
+                {
                     tracing::error!("setSwapAlias 失败: {e}");
                     return Json(ReturnData::err("系统错误"));
                 }
@@ -2149,8 +2159,12 @@ async fn get_swap_alias(
         }
     }
     match state.storage.get_swap_alias(&namespace, &url).await {
-        Ok(Some(alias)) => Json(ReturnData::ok(serde_json::json!({ "url": url, "alias": alias }))),
-        Ok(None) => Json(ReturnData::ok(serde_json::json!({ "url": url, "alias": null }))),
+        Ok(Some(alias)) => Json(ReturnData::ok(
+            serde_json::json!({ "url": url, "alias": alias }),
+        )),
+        Ok(None) => Json(ReturnData::ok(
+            serde_json::json!({ "url": url, "alias": null }),
+        )),
         Err(e) => {
             tracing::error!("getSwapAlias 失败: {e}");
             Json(ReturnData::err("系统错误"))
