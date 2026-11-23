@@ -172,11 +172,11 @@ export function Segmented<T extends string | number>({
             onClick={() => onChange(option.value)}
             style={option.style}
             className={cn(
-              "flex cursor-pointer items-center justify-center rounded-lg border py-2 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+              "flex cursor-pointer items-center justify-center rounded-[var(--radius-md)] border py-2 text-xs outline-none transition-[background-color,border-color,color,box-shadow] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring",
               Icon !== undefined && "flex-col gap-1 py-2.5",
               selected
-                ? "border-accent bg-accent/10 text-accent"
-                : "border-border text-muted-foreground hover:border-accent/50 hover:text-foreground",
+                ? "border-accent/60 bg-accent-soft font-medium text-accent shadow-[var(--shadow-xs)]"
+                : "border-border bg-surface text-muted-foreground hover:border-accent/40 hover:bg-surface-muted hover:text-foreground",
             )}
           >
             {Icon !== undefined ? <Icon className="size-4" aria-hidden /> : null}

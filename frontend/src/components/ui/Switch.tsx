@@ -23,7 +23,7 @@ export function Switch({ size = "md", className, ...props }: SwitchProps) {
   return (
     <SwitchPrimitive.Root
       className={cn(
-        "relative inline-flex shrink-0 cursor-pointer items-center rounded-full border-2 border-border before:absolute before:-inset-x-1 before:-inset-y-2.5 before:content-[''] bg-surface-muted outline-none transition duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-97 data-[state=checked]:border-transparent data-[state=checked]:bg-accent disabled:pointer-events-none disabled:opacity-50",
+        "relative inline-flex shrink-0 cursor-pointer items-center rounded-full border border-border bg-surface-muted shadow-[inset_0_1px_2px_rgb(0_0_0_/_8%)] before:absolute before:-inset-x-1 before:-inset-y-2.5 before:content-[''] outline-none transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-97 data-[state=checked]:border-transparent data-[state=checked]:bg-accent data-[state=checked]:shadow-none disabled:pointer-events-none disabled:opacity-50",
         trackClass[size],
         className,
       )}
@@ -31,7 +31,7 @@ export function Switch({ size = "md", className, ...props }: SwitchProps) {
     >
       <SwitchPrimitive.Thumb
         className={cn(
-          "pointer-events-none block rounded-full bg-background shadow-sm transition-transform duration-150 ease-out",
+          "pointer-events-none block rounded-full bg-surface-elevated shadow-[0_1px_3px_rgb(0_0_0_/_25%)] transition-transform duration-150 ease-out",
           thumbClass[size],
         )}
       />

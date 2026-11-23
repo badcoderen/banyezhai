@@ -157,7 +157,7 @@ function ToastCard({ item }: ToastCardProps) {
       onMouseLeave={resume}
       onFocus={pause}
       onBlur={resume}
-      className="ui-toast pointer-events-auto flex w-full max-w-80 items-start gap-2.5 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground shadow-xl"
+      className="ui-toast pointer-events-auto flex w-full max-w-80 items-start gap-2.5 rounded-[var(--radius-lg)] border border-border bg-surface-elevated px-3.5 py-2.5 text-sm text-foreground shadow-[var(--shadow-lg)]"
     >
       <Icon aria-hidden className={cn("mt-0.5 size-4 shrink-0", toneByType[item.type])} />
       <p className="min-w-0 flex-1 leading-5 break-words">{item.message}</p>
