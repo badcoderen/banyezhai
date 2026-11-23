@@ -42,7 +42,7 @@ import {
 import { humanizeError } from "@/lib/errors";
 import { startCacheBookStream } from "@/services/cache";
 import {
-  GROUP_ALL,
+  GROUP_ONLINE,
   buildShelfGroups,
   errorMessage,
   filterBooksByGroup,
@@ -110,7 +110,7 @@ export default function ShelfPage() {
   const [layout, setLayout] = React.useState<BookCardLayout>(() =>
     getJSON<string>(LAYOUT_KEY) === "list" ? "list" : "grid",
   );
-  const [activeGroup, setActiveGroup] = React.useState(GROUP_ALL);
+  const [activeGroup, setActiveGroup] = React.useState(GROUP_ONLINE);
   const [editMode, setEditMode] = React.useState(false);
   const [selected, setSelected] = React.useState<ReadonlySet<string>>(EMPTY_SELECTION);
   const [infoBook, setInfoBook] = React.useState<Book | null>(null);
@@ -122,19 +122,22 @@ export default function ShelfPage() {
   const { groups } = useBookGroups();
   const shelfGroups = React.useMemo(() => buildShelfGroups(books, groups), [books, groups]);
 
-  // 当前分组可能因为书被删空而消失, 回落到「全部」
+  // 当前分组可能因为书被删空而消失, 回落到默认视图「在线」
   const currentGroup = React.useMemo(
     () =>
-      shelfGroups.some((item) => item.group.groupId === activeGroup) ? activeGroup : GROUP_ALL,
+      shelfGroups.some((item) => item.group.groupId === activeGroup)
+        ? activeGroup
+        : GROUP_ONLINE,
     [shelfGroups, activeGroup],
   );
 
-  // 分组被删空后回落「全部」时给出说明, 避免选中态凭空消失
-  const groupFellBack = activeGroup !== GROUP_ALL && !shelfGroups.some((item) => item.group.groupId === activeGroup);
+  // 分组被删空后回落默认视图时给出说明, 避免选中态凭空消失
+  const groupFellBack =
+    activeGroup !== GROUP_ONLINE && !shelfGroups.some((item) => item.group.groupId === activeGroup);
   React.useEffect(() => {
     if (groupFellBack) {
-      toast.info("该分组已空, 已回到全部");
-      setActiveGroup(GROUP_ALL);
+      toast.info("该分组已空, 已回到在线");
+      setActiveGroup(GROUP_ONLINE);
     }
   }, [groupFellBack]);
 
@@ -217,7 +220,7 @@ export default function ShelfPage() {
 
   const clearFilters = () => {
     setKeyword("");
-    setActiveGroup(GROUP_ALL);
+    setActiveGroup(GROUP_ONLINE);
   };
 
   /** 切换网格/列表并记住偏好 */

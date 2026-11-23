@@ -18,12 +18,19 @@ import type { Book, BookGroup } from "@/types/api";
 export const BOOKS_QUERY_KEY = ["books"] as const;
 export const BOOK_GROUPS_QUERY_KEY = ["bookGroups"] as const;
 
-/** 后端 BookType.local: 本地书的 origin 值 */
+/** 后端 BookType.local: 本地书 origin 的历史值（上传/OPDS 导入路径） */
 export const LOCAL_ORIGIN = "loc_book";
+/** 书仓同步导入用 `local`（local_sync），历史导入用 `loc_book`，两者都算本地书 */
+const LOCAL_ORIGINS = new Set([LOCAL_ORIGIN, "local"]);
+
+export function isLocalBook(book: Book): boolean {
+  return LOCAL_ORIGINS.has(book.origin);
+}
 /** Book.type: 0=文本 1=音频 */
 export const AUDIO_BOOK_TYPE = 1;
 
 /** 内置分组 id(与旧 Vue 前端一致, 负数为虚拟分组, 不参与位运算) */
+export const GROUP_ONLINE = -5;
 export const GROUP_ALL = -1;
 export const GROUP_LOCAL = -2;
 export const GROUP_AUDIO = -3;
@@ -41,6 +48,8 @@ export interface ShelfGroupItem {
 }
 
 const BUILT_IN_GROUPS: ShelfGroup[] = [
+  // 默认视图: 只放书源书, 本地书仓同步进来的书统一收在「本地」目录里
+  { groupId: GROUP_ONLINE, groupName: "在线", order: -11, show: true, builtIn: true },
   { groupId: GROUP_ALL, groupName: "全部", order: -10, show: true, builtIn: true },
   { groupId: GROUP_LOCAL, groupName: "本地", order: -9, show: true, builtIn: true },
   { groupId: GROUP_AUDIO, groupName: "音频", order: -8, show: true, builtIn: true },
@@ -78,14 +87,18 @@ export function sortBooksByRecent(books: Book[]): Book[] {
 /** 书籍是否属于某分组: 自定义分组按 group 位运算, 内置分组按语义字段 */
 export function matchesGroup(book: Book, groupId: number): boolean {
   switch (groupId) {
+    case GROUP_ONLINE:
+      // 默认视图: 只留书源书, 本地书仓的书收进「本地」目录
+      return !isLocalBook(book);
     case GROUP_ALL:
       return true;
     case GROUP_LOCAL:
-      return book.origin === LOCAL_ORIGIN;
+      return isLocalBook(book);
     case GROUP_AUDIO:
       return book.type === AUDIO_BOOK_TYPE;
     case GROUP_UNGROUPED:
-      return book.group === 0;
+      // 本地书已归「本地」目录, 不再算未分组散书
+      return book.group === 0 && !isLocalBook(book);
     default:
       // groupId === 0 视为不过滤(旧前端语义)
       return groupId === 0 ? true : (book.group & groupId) !== 0;
@@ -105,7 +118,11 @@ export function buildShelfGroups(books: Book[], groups: BookGroup[]): ShelfGroup
 
   return [...BUILT_IN_GROUPS, ...custom]
     .map((group) => ({ group, count: filterBooksByGroup(books, group.groupId).length }))
-    .filter((item) => item.group.groupId === GROUP_ALL || item.count > 0)
+    // 默认视图「在线」即使为空也保留(否则选中态会回落); 其余空分组隐藏
+    .filter(
+      (item) =>
+        item.group.groupId === GROUP_ONLINE || item.group.groupId === GROUP_ALL || item.count > 0,
+    )
     .sort((a, b) => a.group.order - b.group.order);
 }
 
